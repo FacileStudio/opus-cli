@@ -4,7 +4,7 @@ pub mod opus;
 pub mod tui;
 pub mod debug;
 pub mod config;
-pub mod auth;
+
 pub mod terminal_capabilities;
 pub mod url_utils;
 

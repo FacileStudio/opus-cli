@@ -7,7 +7,7 @@ mod opus_client;
 mod opus_parser;
 mod debug;
 mod config;
-mod auth;
+
 mod first_run;
 mod ui_loop;
 mod url_utils;
@@ -35,12 +35,6 @@ fn main() {
                 .action(clap::ArgAction::SetTrue)
         )
         .arg(
-            Arg::new("login")
-                .long("login")
-                .help("Run the device auth flow")
-                .action(clap::ArgAction::SetTrue)
-        )
-        .arg(
             Arg::new("quick")
                 .long("quick")
                 .help("Quick add a task: --quick \"new task *label +project due:tomorrow\"")
@@ -48,28 +42,6 @@ fn main() {
                 .num_args(1)
         )
         .get_matches();
-
-    if matches.get_flag("login") {
-        let config_path = matches.get_one::<String>("config");
-        let config = crate::config::OpusConfig::load_from_path(config_path.map(|s| s.as_str()));
-        let api_url = config
-            .as_ref()
-            .map(|c| c.api_url.clone())
-            .unwrap_or_else(|| {
-                std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string())
-            });
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        match rt.block_on(crate::auth::run_device_auth_flow(&api_url)) {
-            Ok(creds) => {
-                println!("Login successful as {} ({})", creds.user_name, creds.user_email);
-                std::process::exit(0);
-            }
-            Err(e) => {
-                eprintln!("Login failed: {}", e);
-                std::process::exit(1);
-            }
-        }
-    }
 
     if let Some(quick_str) = matches.get_one::<String>("quick") {
         let use_env = matches.get_flag("dev-env");
@@ -100,12 +72,12 @@ fn main() {
                             }
                         }
                     } else {
-                        eprintln!("Config exists but no API key configured");
+                        eprintln!("No API key configured. Generate one from your Opus dashboard: Settings > Account > Developer");
                         std::process::exit(1);
                     }
                 },
                 None => {
-                    eprintln!("Config file not found");
+                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
                     std::process::exit(1);
                 }
             }
@@ -180,7 +152,7 @@ fn main() {
                     }
                 } else {
                     debug_log("Config exists but no API key configured");
-                    eprintln!("No API key configured. Run `opus --login` to authenticate.");
+                    eprintln!("No API key configured. Generate one from your Opus dashboard: Settings > Account > Developer");
                     std::process::exit(1);
                 }
             },
@@ -196,7 +168,7 @@ fn main() {
                     eprintln!("Error: {}", error_msg);
                     std::process::exit(1);
                 } else {
-                    eprintln!("No config found. Run `opus --login` to authenticate.");
+                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
                     std::process::exit(1);
                 }
             }

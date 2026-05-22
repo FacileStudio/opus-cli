@@ -32,44 +32,15 @@ pub fn first_run_wizard() -> Option<OpusConfig> {
     }
 
     println!();
-    println!("Choose authentication method:");
-    println!("  1) API key");
-    println!("  2) Device authorization (browser login)");
-    print!("Selection [1]: ");
+    println!("Generate an API key from your Opus dashboard: Settings > Account > Developer");
+    print!("Paste your API key: ");
     io::stdout().flush().unwrap();
-
-    let mut auth_choice = String::new();
-    io::stdin().read_line(&mut auth_choice).unwrap();
-    let auth_choice = auth_choice.trim();
-
     let mut api_key: Option<String> = None;
-
-    match auth_choice {
-        "2" => {
-            println!();
-            println!("Starting device authorization flow...");
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            match rt.block_on(crate::auth::run_device_auth_flow(&base_url)) {
-                Ok(creds) => {
-                    println!("Authenticated as {} ({})", creds.user_name, creds.user_email);
-                    api_key = Some(creds.token);
-                }
-                Err(e) => {
-                    println!("Device auth failed: {}", e);
-                    println!("You can set an API key manually in the config file later.");
-                }
-            }
-        }
-        _ => {
-            print!("Paste your API key: ");
-            io::stdout().flush().unwrap();
-            let mut key_input = String::new();
-            io::stdin().read_line(&mut key_input).unwrap();
-            let key_input = key_input.trim().to_string();
-            if !key_input.is_empty() {
-                api_key = Some(key_input);
-            }
-        }
+    let mut key_input = String::new();
+    io::stdin().read_line(&mut key_input).unwrap();
+    let key_input = key_input.trim().to_string();
+    if !key_input.is_empty() {
+        api_key = Some(key_input);
     }
 
     println!();

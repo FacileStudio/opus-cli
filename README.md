@@ -9,7 +9,7 @@ A fast, keyboard-driven TUI client for Opus project management.
 - Quick add with inline syntax for projects, labels, due dates, and priority
 - Fuzzy search and filtering
 - Customizable column layouts
-- API key authentication and device authorization flow
+- API key authentication
 - Auto-refresh with configurable interval
 - Vim-inspired keybindings
 
@@ -25,19 +25,10 @@ The binary is at `./target/release/opus`.
 
 ## Configuration
 
-opus-cli reads configuration from a YAML file:
+Generate an API key from your Opus dashboard at Settings > Account > Developer, then add it to `~/.opus.yml`.
 
-- `$XDG_CONFIG_HOME/opus/config.yaml` (if XDG is set)
-- `~/.config/opus/config.yaml` (default)
-- Custom path via `--config /path/to/config.yaml`
-
-Copy the example config to get started:
-
-```sh
-cp config.example.yaml ~/.config/opus/config.yaml
-```
-
-You can also use environment variables (see `.env.example`).
+Run `opus` with no config file to launch the setup wizard, or create the file manually.
+You can also pass a custom path via `--config /path/to/config.yaml` or use environment variables (see `.env.example`).
 
 ### Example config.yaml
 
