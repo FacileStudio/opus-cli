@@ -52,7 +52,10 @@ impl OpusClient {
 
     pub async fn test_connection(&self) -> ReqwestResult<bool> {
         debug_log(&format!("Testing connection to {}", self.base_url));
-        let url = format!("{}/api/project/", self.base_url);
+        let url = format!(
+            "{}/api/project?workspaceId={}",
+            self.base_url, self.workspace_id
+        );
         debug_log(&format!("Testing with URL: {}", url));
         let response = self.client
             .get(&url)

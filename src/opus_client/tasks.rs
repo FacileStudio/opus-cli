@@ -5,6 +5,25 @@ use chrono::{DateTime, Utc};
 use crate::debug::debug_log;
 use crate::opus::models::{Task, Column};
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TaskListColumn {
+    tasks: Vec<Task>,
+    #[serde(default)]
+    is_final: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TaskListData {
+    columns: Vec<TaskListColumn>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TaskListResponse {
+    data: TaskListData,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpusTaskCreate {
@@ -397,7 +416,14 @@ impl super::OpusClient {
 
         let status = response.status();
         if status.is_success() {
-            let tasks: Vec<Task> = response.json().await?;
+            let resp: TaskListResponse = response.json().await?;
+            let mut tasks = Vec::new();
+            for col in resp.data.columns {
+                for mut task in col.tasks {
+                    task.done = col.is_final;
+                    tasks.push(task);
+                }
+            }
             debug_log(&format!(
                 "Got {} tasks for project {}",
                 tasks.len(),

@@ -6,7 +6,10 @@ impl super::OpusClient {
     pub async fn get_all_projects(
         &self,
     ) -> Result<Vec<Project>, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/api/project/", self.base_url);
+        let url = format!(
+            "{}/api/project?workspaceId={}",
+            self.base_url, self.workspace_id
+        );
         debug_log(&format!("Fetching all projects from: {}", url));
 
         let response = self
@@ -19,16 +22,12 @@ impl super::OpusClient {
         let status = response.status();
         if status.is_success() {
             let projects: Vec<Project> = response.json().await?;
-            let workspace_projects: Vec<Project> = projects
-                .into_iter()
-                .filter(|p| p.workspace_id == self.workspace_id)
-                .collect();
             debug_log(&format!(
                 "Got {} projects for workspace {}",
-                workspace_projects.len(),
+                projects.len(),
                 self.workspace_id
             ));
-            Ok(workspace_projects)
+            Ok(projects)
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(format!("Failed to fetch projects: {} - {}", status, error_text).into())
@@ -60,7 +59,7 @@ impl super::OpusClient {
         &self,
         name: &str,
     ) -> Result<Project, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/api/project/", self.base_url);
+        let url = format!("{}/api/project", self.base_url);
         let payload = serde_json::json!({
             "name": name,
             "workspaceId": self.workspace_id,
