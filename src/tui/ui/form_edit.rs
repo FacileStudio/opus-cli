@@ -321,19 +321,19 @@ fn render_help_section(f: &mut Frame, area: Rect, form: &FormEditState) {
     match form.field_index {
         2 | 3 => {
             help_lines.push(Line::from(vec![
-                Span::styled("Date Format:", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::styled("Date Format:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::raw("  YYYY-MM-DD (e.g., 2025-07-15) or leave empty for no date"),
             ]));
         }
         4 => {
             help_lines.push(Line::from(vec![
-                Span::styled("Priority:", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::styled("Priority:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::raw("     0=None, 1=Low, 2=Medium, 3=High, 4=Urgent, 5=Critical"),
             ]));
         }
         5 => {
             help_lines.push(Line::from(vec![
-                Span::styled("Project:", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::styled("Project:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::raw("      Press "),
                 Span::styled("Space", Style::default().fg(Color::Yellow)),
                 Span::raw(" to open project picker"),
@@ -341,7 +341,7 @@ fn render_help_section(f: &mut Frame, area: Rect, form: &FormEditState) {
         }
         6 => {
             help_lines.push(Line::from(vec![
-                Span::styled("Labels:", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::styled("Labels:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::raw("       Press "),
                 Span::styled("Space", Style::default().fg(Color::Yellow)),
                 Span::raw(" to open label picker"),
@@ -349,7 +349,7 @@ fn render_help_section(f: &mut Frame, area: Rect, form: &FormEditState) {
         }
         8 => {
             help_lines.push(Line::from(vec![
-                Span::styled("Favorite:", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::styled("Favorite:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::raw("     Press "),
                 Span::styled("Space", Style::default().fg(Color::Yellow)),
                 Span::raw(" to toggle favorite status"),
@@ -357,7 +357,7 @@ fn render_help_section(f: &mut Frame, area: Rect, form: &FormEditState) {
         }
         _ => {
             help_lines.push(Line::from(vec![
-                Span::styled("Tip:", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                Span::styled("Tip:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::raw("          Use Tab to navigate between fields quickly"),
             ]));
         }

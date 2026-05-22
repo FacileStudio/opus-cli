@@ -40,7 +40,7 @@ pub fn draw_task_details(f: &mut Frame, app: &App, area: Rect) {
             if let Some(project_name) = app.project_map.get(&task.project_id) {
                 let color = app.project_colors.get(&task.project_id)
                     .map(|hex_str| hex_to_color(hex_str))
-                    .unwrap_or(Color::Blue);
+                    .unwrap_or(Color::Cyan);
 
                 details_lines.push(Line::from(vec![
                     Span::styled("Project: ", Style::default().add_modifier(Modifier::BOLD)),

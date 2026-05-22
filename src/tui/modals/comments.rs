@@ -351,7 +351,7 @@ impl CommentsModal {
         let input_block = Block::default()
             .title("New Comment")
             .borders(Borders::ALL)
-            .style(Style::default().fg(Color::Green));
+            .style(Style::default().fg(Color::Cyan));
 
         let input_para = Paragraph::new(self.input.as_str())
             .block(input_block)

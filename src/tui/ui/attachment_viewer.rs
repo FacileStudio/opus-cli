@@ -67,11 +67,16 @@ impl AttachmentViewer {
 
             let icon = self.get_file_icon(file_name, attachment.mime_type.as_deref());
 
+            let size_style = if is_selected {
+                style
+            } else {
+                Style::default().fg(Color::DarkGray)
+            };
             lines.push(Line::from(vec![
                 Span::styled(icon, style),
                 Span::styled(" ", style),
                 Span::styled(file_name.as_str(), style),
-                Span::styled(format!(" ({})", size_text), style.fg(Color::Gray)),
+                Span::styled(format!(" ({})", size_text), size_style),
             ]));
         }
 
@@ -114,7 +119,7 @@ impl AttachmentViewer {
 
         lines.push(Line::from(vec![
             Span::styled("File: ", Style::default().add_modifier(Modifier::BOLD)),
-            Span::styled(&attachment.filename, Style::default().fg(Color::Blue))
+            Span::styled(&attachment.filename, Style::default().fg(Color::Cyan))
         ]));
 
         if let Some(mime) = &attachment.mime_type {
@@ -153,7 +158,7 @@ impl AttachmentViewer {
         lines.push(Line::from(vec![
             Span::styled(icon, Style::default().fg(Color::Yellow)),
             Span::styled(" ", Style::default()),
-            Span::styled(file_name.as_str(), Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
+            Span::styled(file_name.as_str(), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]));
         lines.push(Line::from(""));
 

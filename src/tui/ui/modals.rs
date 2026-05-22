@@ -96,7 +96,7 @@ pub fn draw_quick_add_modal(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .title("Quick Add Task")
         .title_alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Green));
+        .style(Style::default().fg(Color::Cyan));
     let input_paragraph = Paragraph::new(vec![Line::from(input_spans)])
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
@@ -124,32 +124,29 @@ pub fn draw_quick_add_modal(f: &mut Frame, app: &App) {
                     Some(SuggestionMode::Project) => (get_project_color(s, app), "+"),
                     _ => (Color::Gray, "")
                 };
-                let styled = Span::styled(format!("{}{}", prefix, s), Style::default().fg(color));
                 let absolute_index = start + i;
                 if absolute_index == app.selected_suggestion {
-                    // Highlight with color background and black text
                     Line::from(vec![Span::styled(
                         format!("{}{}", prefix, s),
-                        Style::default().fg(Color::Black).bg(color).add_modifier(Modifier::BOLD)
+                        Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
                     )])
                 } else {
-                    Line::from(vec![styled])
+                    Line::from(vec![Span::styled(format!("{}{}", prefix, s), Style::default().fg(color))])
                 }
             }).collect();
         let suggestion_block = Block::default()
             .borders(Borders::ALL)
             .title("Suggestions")
-            .style(Style::default().fg(Color::Gray));
+            .style(Style::default().fg(Color::DarkGray));
         let suggestion_paragraph = Paragraph::new(suggestion_lines)
             .block(suggestion_block)
             .wrap(Wrap { trim: true });
         f.render_widget(suggestion_paragraph, modal_chunks[1]);
     } else {
-        // Optionally, render an empty suggestions box for consistent UI
         let suggestion_block = Block::default()
             .borders(Borders::ALL)
             .title("Suggestions")
-            .style(Style::default().fg(Color::Gray));
+            .style(Style::default().fg(Color::DarkGray));
         let suggestion_paragraph = Paragraph::new("")
             .block(suggestion_block)
             .wrap(Wrap { trim: true });
@@ -222,7 +219,7 @@ pub fn draw_edit_modal(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .title("Edit Task")
         .title_alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Green));
+        .style(Style::default().fg(Color::Cyan));
     let input_paragraph = Paragraph::new(vec![Line::from(input_spans)])
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
@@ -250,21 +247,20 @@ pub fn draw_edit_modal(f: &mut Frame, app: &App) {
                     Some(SuggestionMode::Project) => (get_project_color(s, app), "+"),
                     _ => (Color::Gray, "")
                 };
-                let styled = Span::styled(format!("{}{}", prefix, s), Style::default().fg(color));
                 let absolute_index = start + i;
                 if absolute_index == app.selected_suggestion {
                     Line::from(vec![Span::styled(
                         format!("{}{}", prefix, s),
-                        Style::default().fg(Color::Black).bg(color).add_modifier(Modifier::BOLD)
+                        Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
                     )])
                 } else {
-                    Line::from(vec![styled])
+                    Line::from(vec![Span::styled(format!("{}{}", prefix, s), Style::default().fg(color))])
                 }
             }).collect();
         let suggestion_block = Block::default()
             .borders(Borders::ALL)
             .title("Suggestions")
-            .style(Style::default().fg(Color::Gray));
+            .style(Style::default().fg(Color::DarkGray));
         let suggestion_paragraph = Paragraph::new(suggestion_lines)
             .block(suggestion_block)
             .wrap(Wrap { trim: true });
@@ -273,7 +269,7 @@ pub fn draw_edit_modal(f: &mut Frame, app: &App) {
         let suggestion_block = Block::default()
             .borders(Borders::ALL)
             .title("Suggestions")
-            .style(Style::default().fg(Color::Gray));
+            .style(Style::default().fg(Color::DarkGray));
         let suggestion_paragraph = Paragraph::new("")
             .block(suggestion_block)
             .wrap(Wrap { trim: true });
@@ -282,7 +278,7 @@ pub fn draw_edit_modal(f: &mut Frame, app: &App) {
     // Help text at the bottom
     let help_text = vec![
         Line::from(vec![
-            Span::styled("Edit with Quick Add Magic:", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
+            Span::styled("Edit with Quick Add Magic:", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         ]),
         Line::from(""),
         Line::from(vec![Span::raw("• "), Span::styled("Buy groceries *shopping *urgent", Style::default().fg(Color::White)), Span::raw(" - adds labels")]),
@@ -321,37 +317,36 @@ pub fn draw_edit_modal(f: &mut Frame, app: &App) {
 
 pub fn draw_confirmation_dialog(f: &mut Frame, app: &App) {
     let area = f.size();
-    let modal_width = (area.width as f32 * 0.6) as u16;
-    let modal_height = 8;
+    let modal_width = 50.min(area.width.saturating_sub(4));
+    let modal_height = 5;
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
     f.render_widget(Clear, modal_area);
-    let block = Block::default()
-        .title(" Confirm Action ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::White));
-    f.render_widget(block, modal_area);
 
-    let buttons_text = vec![
-        Line::from(app.confirmation_message.as_str()),
+    let block = Block::default()
+        .title(" Confirm ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Red));
+
+    let content = vec![
+        Line::from(Span::styled(
+            app.confirmation_message.as_str(),
+            Style::default().fg(Color::Red),
+        )),
         Line::raw(""),
         Line::from(vec![
-            Span::styled("Enter", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            Span::raw("/"),
-            Span::styled("Y", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            Span::raw(" confirm · "),
-            Span::styled("N", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-            Span::raw("/"),
-            Span::styled("Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-            Span::raw(" cancel"),
+            Span::styled("y/Enter", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::raw(": Confirm  "),
+            Span::styled("n/Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            Span::raw(": Cancel"),
         ]),
     ];
-    let buttons_block = Block::default().borders(Borders::NONE);
-    let buttons_paragraph = Paragraph::new(buttons_text)
-        .block(buttons_block)
+
+    let paragraph = Paragraph::new(content)
+        .block(block)
         .alignment(Alignment::Center);
-    f.render_widget(buttons_paragraph, modal_area);
+    f.render_widget(paragraph, modal_area);
 }
 
 pub fn draw_help_modal(f: &mut Frame, app: &App) {
@@ -503,55 +498,31 @@ pub fn draw_advanced_features_modal(f: &mut Frame, app: &App) {
     
     for (i, (key, title, description, available)) in advanced_features.iter().enumerate() {
         let is_selected = i == app.selected_advanced_feature_index;
-        
-        let key_style = if is_selected {
-            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+        let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
+
+        if is_selected {
+            let status = if *available { "(Available)" } else { "(Coming Soon)" };
+            let text = format!(" {} {} - {} {}", key, title, description, status);
+            lines.push(Line::from(vec![Span::styled(text, sel)]));
         } else {
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-        };
-        
-        let title_style = if is_selected {
-            Style::default().add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
-        
-        let desc_style = if is_selected {
-            Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::Gray)
-        };
-        
-        let status_style = if *available {
-            if is_selected {
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
-            } else {
+            let key_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+            let status_style = if *available {
                 Style::default().fg(Color::Green)
-            }
-        } else {
-            if is_selected {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::Yellow)
-            }
-        };
-        
-        let mut feature_spans = vec![
-            Span::styled(format!(" {} ", key), key_style),
-            Span::raw(" "),
-            Span::styled(*title, title_style),
-            Span::raw(" - "),
-            Span::styled(*description, desc_style),
-            Span::raw(" "),
-        ];
-        
-        if *available {
-            feature_spans.push(Span::styled("(Available)", status_style));
-        } else {
-            feature_spans.push(Span::styled("(Coming Soon)", status_style));
+            };
+            let status_text = if *available { "(Available)" } else { "(Coming Soon)" };
+
+            lines.push(Line::from(vec![
+                Span::styled(format!(" {} ", key), key_style),
+                Span::raw(" "),
+                Span::styled(*title, Style::default()),
+                Span::raw(" - "),
+                Span::styled(*description, Style::default().fg(Color::Gray)),
+                Span::raw(" "),
+                Span::styled(status_text, status_style),
+            ]));
         }
-        
-        lines.push(Line::from(feature_spans));
     }
     
     lines.push(Line::raw(""));
@@ -590,7 +561,7 @@ pub fn draw_sort_modal(f: &mut Frame, app: &App) {
         let style = if i == app.selected_sort_index {
             Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
         } else {
-            Style::default()
+            Style::default().fg(Color::Cyan)
         };
         lines.push(Line::from(Span::styled(*opt, style)));
     }
@@ -641,93 +612,52 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
             lines.push(Line::raw(""));
             
             for (i, action) in quick_actions.iter().enumerate() {
-                let key_style = if i == app.selected_quick_action_index {
-                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+                let is_selected = i == app.selected_quick_action_index;
+                let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
+
+                let key_style = if is_selected {
+                    sel
                 } else {
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
                 };
-                
-                let is_selected = i == app.selected_quick_action_index;
-                
-                // Create colorized description spans
+
                 let mut description_spans = vec![
                     Span::styled(format!(" {} ", action.key), key_style),
                     Span::raw(" "),
                 ];
-                
-                // Add colorized description based on action type
-                match action.action.as_str() {
-                    "project" => {
-                        let base_style = if is_selected {
-                            Style::default().add_modifier(Modifier::BOLD)
-                        } else {
-                            Style::default()
-                        };
-                        
-                        description_spans.push(Span::styled("Move to project: ", base_style.fg(Color::White)));
-                        
-                        let project_color = get_project_color(&action.target, app);
-                        let project_style = if is_selected {
-                            base_style.fg(project_color).add_modifier(Modifier::BOLD)
-                        } else {
-                            base_style.fg(project_color)
-                        };
-                        description_spans.push(Span::styled(&action.target, project_style));
-                    },
-                    "label" => {
-                        let base_style = if is_selected {
-                            Style::default().add_modifier(Modifier::BOLD)
-                        } else {
-                            Style::default()
-                        };
-                        
-                        description_spans.push(Span::styled("Add label: ", base_style.fg(Color::White)));
-                        
-                        let label_color = get_label_color(&action.target, app);
-                        let label_style = if is_selected {
-                            base_style.fg(label_color).add_modifier(Modifier::BOLD)
-                        } else {
-                            base_style.fg(label_color)
-                        };
-                        description_spans.push(Span::styled(&action.target, label_style));
-                    },
-                    "priority" => {
-                        let base_style = if is_selected {
-                            Style::default().add_modifier(Modifier::BOLD)
-                        } else {
-                            Style::default()
-                        };
-                        
-                        description_spans.push(Span::styled("Set priority to: ", base_style.fg(Color::White)));
-                        
-                        // Color priority based on level (1=low, 5=high)
-                        let priority_color = match action.target.as_str() {
-                            "1" => Color::Green,   // Low priority
-                            "2" => Color::Yellow,  // Medium-low priority  
-                            "3" => Color::LightBlue, // Medium priority
-                            "4" => Color::Magenta, // High priority
-                            "5" => Color::Red,     // Very high priority
-                            _ => Color::White,     // Unknown priority
-                        };
-                        
-                        let priority_style = if is_selected {
-                            base_style.fg(priority_color).add_modifier(Modifier::BOLD)
-                        } else {
-                            base_style.fg(priority_color)
-                        };
-                        description_spans.push(Span::styled(&action.target, priority_style));
-                    },
-                    _ => {
-                        // Fallback for unknown action types
-                        let desc_style = if is_selected {
-                            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-                        } else {
-                            Style::default().fg(Color::White)
-                        };
-                        description_spans.push(Span::styled(action.get_description(), desc_style));
+
+                if is_selected {
+                    description_spans.push(Span::styled(action.get_description(), sel));
+                } else {
+                    match action.action.as_str() {
+                        "project" => {
+                            description_spans.push(Span::styled("Move to project: ", Style::default().fg(Color::White)));
+                            let project_color = get_project_color(&action.target, app);
+                            description_spans.push(Span::styled(&action.target, Style::default().fg(project_color)));
+                        },
+                        "label" => {
+                            description_spans.push(Span::styled("Add label: ", Style::default().fg(Color::White)));
+                            let label_color = get_label_color(&action.target, app);
+                            description_spans.push(Span::styled(&action.target, Style::default().fg(label_color)));
+                        },
+                        "priority" => {
+                            description_spans.push(Span::styled("Set priority to: ", Style::default().fg(Color::White)));
+                            let priority_color = match action.target.as_str() {
+                                "1" => Color::Green,
+                                "2" => Color::Yellow,
+                                "3" => Color::Cyan,
+                                "4" => Color::Magenta,
+                                "5" => Color::Red,
+                                _ => Color::White,
+                            };
+                            description_spans.push(Span::styled(&action.target, Style::default().fg(priority_color)));
+                        },
+                        _ => {
+                            description_spans.push(Span::styled(action.get_description(), Style::default().fg(Color::White)));
+                        }
                     }
                 }
-                
+
                 lines.push(Line::from(description_spans));
             }
         }
@@ -1021,16 +951,18 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
     } else {
         for (i, (task_id, task_title)) in app.filtered_subtask_tasks.iter().enumerate() {
             let is_selected = i == app.selected_subtask_picker_index;
-            let style = if is_selected {
-                Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+            let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
+
+            if is_selected {
+                list_lines.push(Line::from(vec![
+                    Span::styled(format!("#{} {}", task_id, task_title), sel)
+                ]));
             } else {
-                Style::default().fg(Color::White)
-            };
-            
-            list_lines.push(Line::from(vec![
-                Span::styled(format!("#{} ", task_id), Style::default().fg(Color::Gray)),
-                Span::styled(task_title, style)
-            ]));
+                list_lines.push(Line::from(vec![
+                    Span::styled(format!("#{} ", task_id), Style::default().fg(Color::DarkGray)),
+                    Span::styled(task_title, Style::default().fg(Color::Cyan))
+                ]));
+            }
         }
     }
     
