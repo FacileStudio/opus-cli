@@ -1,0 +1,6 @@
+api_url: "https://opus.example.com"
+api_key: "your-api-key"
+workspace_id: "your-workspace-id"
+default_project: "Inbox"
+auto_refresh: true
+refresh_interval_seconds: 300
