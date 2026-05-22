@@ -127,12 +127,19 @@ pub struct Column {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Label {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub color: String,
+    #[serde(default)]
     pub task_id: Option<String>,
+    #[serde(default)]
     pub workspace_id: Option<String>,
+    #[serde(default = "default_now")]
     pub created_at: DateTime<Utc>,
+    #[serde(default = "default_now")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -186,12 +193,19 @@ pub struct Task {
     pub id: String,
     pub project_id: String,
     pub title: String,
+    #[serde(default)]
     pub description: Option<String>,
+    #[serde(default = "default_status")]
     pub status: String,
+    #[serde(default)]
     pub column_id: Option<String>,
+    #[serde(default)]
     pub priority: Priority,
+    #[serde(default)]
     pub position: i32,
+    #[serde(default)]
     pub number: i32,
+    #[serde(default)]
     pub user_id: Option<String>,
     #[serde(
         default,
@@ -205,7 +219,15 @@ pub struct Task {
         skip_serializing_if = "Option::is_none"
     )]
     pub due_date: Option<DateTime<Utc>>,
+    #[serde(
+        default = "default_now",
+        deserialize_with = "deserialize_datetime_or_default"
+    )]
     pub created_at: DateTime<Utc>,
+    #[serde(
+        default = "default_now",
+        deserialize_with = "deserialize_datetime_or_default"
+    )]
     pub updated_at: DateTime<Utc>,
 
     #[serde(default)]
@@ -224,6 +246,28 @@ pub struct Task {
     pub comments: Option<Vec<Comment>>,
     #[serde(default)]
     pub related_tasks: Option<std::collections::HashMap<String, Vec<Task>>>,
+}
+
+fn default_status() -> String {
+    "to-do".to_string()
+}
+
+fn default_now() -> DateTime<Utc> {
+    Utc::now()
+}
+
+fn deserialize_datetime_or_default<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    match opt {
+        Some(s) if !s.is_empty() => match DateTime::parse_from_rfc3339(&s) {
+            Ok(dt) => Ok(dt.with_timezone(&Utc)),
+            Err(_) => Ok(Utc::now()),
+        },
+        _ => Ok(Utc::now()),
+    }
 }
 
 impl Task {
