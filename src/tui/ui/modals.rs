@@ -447,7 +447,7 @@ pub fn draw_advanced_help_modal(f: &mut Frame, _app: &App) {
     let block = Block::default()
         .title(" Advanced Features (. key) ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
+        .border_style(Style::default().fg(Color::Cyan));
     let help_lines = vec![
         Line::from(vec![Span::styled("Press . then a key for advanced features:", Style::default().add_modifier(Modifier::BOLD))]),
         Line::raw(""),
@@ -505,9 +505,9 @@ pub fn draw_advanced_features_modal(f: &mut Frame, app: &App) {
         let is_selected = i == app.selected_advanced_feature_index;
         
         let key_style = if is_selected {
-            Style::default().fg(Color::Black).bg(Color::Magenta).add_modifier(Modifier::BOLD)
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)
+            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
         };
         
         let title_style = if is_selected {
@@ -563,7 +563,7 @@ pub fn draw_advanced_features_modal(f: &mut Frame, app: &App) {
     let block = Block::default()
         .title(" Advanced Features ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
+        .border_style(Style::default().fg(Color::Cyan));
     
     let para = Paragraph::new(lines)
         .block(block)
@@ -584,11 +584,11 @@ pub fn draw_sort_modal(f: &mut Frame, app: &App) {
     let block = Block::default()
         .title(" Sort Tasks ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
+        .border_style(Style::default().fg(Color::Cyan));
     let mut lines = vec![Line::raw("Select a sorting method (Enter to apply, Esc/q to cancel):")];
     for (i, opt) in app.sort_options.iter().enumerate() {
         let style = if i == app.selected_sort_index {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD | Modifier::REVERSED)
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
         } else {
             Style::default()
         };
@@ -642,7 +642,7 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
             
             for (i, action) in quick_actions.iter().enumerate() {
                 let key_style = if i == app.selected_quick_action_index {
-                    Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)
+                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
                 } else {
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
                 };
@@ -982,8 +982,8 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Magenta));
-    
+        .border_style(Style::default().fg(Color::Cyan));
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -992,37 +992,37 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
             Constraint::Length(3), // Help
         ])
         .split(modal_area);
-    
+
     // Input field
     let input_block = Block::default()
         .borders(Borders::ALL)
         .title("Filter Tasks")
-        .style(Style::default().fg(Color::Green));
-    
+        .style(Style::default().fg(Color::Cyan));
+
     let input_paragraph = Paragraph::new(app.subtask_picker_input.as_str())
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
-    
+
     f.render_widget(input_paragraph, chunks[0]);
-    
+
     // Task list
     let list_block = Block::default()
         .borders(Borders::ALL)
         .title("Available Tasks")
         .style(Style::default().fg(Color::Cyan));
-    
+
     let mut list_lines = vec![];
-    
+
     if app.filtered_subtask_tasks.is_empty() {
         list_lines.push(Line::from(Span::styled(
-            "No tasks found", 
+            "No tasks found",
             Style::default().fg(Color::Gray)
         )));
     } else {
         for (i, (task_id, task_title)) in app.filtered_subtask_tasks.iter().enumerate() {
             let is_selected = i == app.selected_subtask_picker_index;
             let style = if is_selected {
-                Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::White)
             };

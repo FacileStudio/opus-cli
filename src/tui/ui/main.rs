@@ -3,12 +3,12 @@ use ratatui::prelude::*;
 use ratatui::style::{Color, Style, Modifier};
 use ratatui::widgets::{Paragraph, Block, Clear};
 
-pub const PRIMARY_COLOR: Color = Color::Rgb(138, 180, 248);
-pub const SECONDARY_COLOR: Color = Color::Rgb(187, 134, 252);
-pub const SUCCESS_COLOR: Color = Color::Rgb(129, 199, 132);
-pub const DIM_COLOR: Color = Color::Rgb(117, 117, 117);
-pub const DANGER_COLOR: Color = Color::Rgb(239, 83, 80);
-pub const WARNING_COLOR: Color = Color::Rgb(255, 183, 77);
+pub const PRIMARY_COLOR: Color = Color::Cyan;
+pub const SECONDARY_COLOR: Color = Color::Magenta;
+pub const SUCCESS_COLOR: Color = Color::Green;
+pub const DIM_COLOR: Color = Color::DarkGray;
+pub const DANGER_COLOR: Color = Color::Red;
+pub const WARNING_COLOR: Color = Color::Yellow;
 
 use super::task_list::draw_tasks_table;
 use super::task_details::draw_task_details;

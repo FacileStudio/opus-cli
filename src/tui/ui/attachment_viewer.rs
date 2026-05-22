@@ -55,8 +55,8 @@ impl AttachmentViewer {
             let is_selected = i == self.selected_index;
             let style = if is_selected {
                 Style::default()
-                    .fg(Color::White)
-                    .bg(Color::Blue)
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()

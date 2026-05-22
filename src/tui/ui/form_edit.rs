@@ -19,7 +19,7 @@ pub fn draw_form_edit_modal(f: &mut Frame, app: &App) {
         let block = Block::default()
             .title(" Task Editor (Form Mode) ")
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Blue));
+            .border_style(Style::default().fg(Color::Cyan));
         
         f.render_widget(block, modal_area);
         

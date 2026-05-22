@@ -27,7 +27,7 @@ pub fn draw_project_picker_modal(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .title("Filter Projects (type to search)")
         .title_alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Magenta));
+        .style(Style::default().fg(Color::Cyan));
     let input_paragraph = Paragraph::new(app.project_picker_input.as_str())
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
@@ -36,15 +36,16 @@ pub fn draw_project_picker_modal(f: &mut Frame, app: &App) {
     let mut project_lines = Vec::new();
     for (i, (pid, name)) in app.filtered_projects.iter().enumerate() {
         let is_selected = i == app.selected_project_picker_index;
-        let color = if pid.is_empty() {
-            Color::Cyan
+        let style = if is_selected {
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
         } else {
-            app.project_colors.get(pid).map(|hex| hex_to_color(hex)).unwrap_or(Color::White)
+            let color = if pid.is_empty() {
+                Color::Cyan
+            } else {
+                app.project_colors.get(pid).map(|hex| hex_to_color(hex)).unwrap_or(Color::White)
+            };
+            Style::default().fg(color)
         };
-        let mut style = Style::default().fg(color);
-        if is_selected {
-            style = style.add_modifier(Modifier::REVERSED | Modifier::BOLD);
-        }
         project_lines.push(Line::from(vec![Span::styled(name, style)]));
     }
     let list_block = Block::default()
@@ -87,23 +88,24 @@ pub fn draw_label_picker_modal(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .title("Filter Labels (type to search)")
         .title_alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Green));
+        .style(Style::default().fg(Color::Cyan));
     let input_paragraph = Paragraph::new(app.label_picker_input.as_str())
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
     f.render_widget(input_paragraph, modal_chunks[0]);
-    
+
     // Label list
     let mut label_lines = Vec::new();
     for (i, (lid, name)) in app.filtered_labels.iter().enumerate() {
         let is_selected = i == app.selected_label_picker_index;
         let is_checked = app.selected_label_ids.contains(lid);
-        
-        let color = app.label_colors.get(lid).map(|hex| hex_to_color(hex)).unwrap_or(Color::White);
-        let mut style = Style::default().fg(color);
-        if is_selected {
-            style = style.add_modifier(Modifier::REVERSED | Modifier::BOLD);
-        }
+
+        let style = if is_selected {
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+        } else {
+            let color = app.label_colors.get(lid).map(|hex| hex_to_color(hex)).unwrap_or(Color::White);
+            Style::default().fg(color)
+        };
         
         let checkbox = if is_checked { "[✓] " } else { "[ ] " };
         let display_text = format!("{}{}", checkbox, name);
@@ -160,7 +162,7 @@ pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
         .borders(Borders::ALL)
         .title("Filter Saved Views (type to search)")
         .title_alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Magenta));
+        .style(Style::default().fg(Color::Cyan));
     let input_paragraph = Paragraph::new(app.filter_picker_input.as_str())
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
@@ -169,15 +171,13 @@ pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
     let mut filter_lines = Vec::new();
     for (i, (id, title)) in app.filtered_filters.iter().enumerate() {
         let is_selected = i == app.selected_filter_picker_index;
-        let mut style = if id.is_empty() {
-            // Style "Clear Filter" option differently
+        let style = if is_selected {
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+        } else if id.is_empty() {
             Style::default().fg(Color::Red)
         } else {
             Style::default().fg(Color::Cyan)
         };
-        if is_selected {
-            style = style.add_modifier(Modifier::REVERSED | Modifier::BOLD);
-        }
         filter_lines.push(Line::from(vec![Span::styled(title, style)]));
     }
     

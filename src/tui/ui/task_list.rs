@@ -302,13 +302,96 @@ fn create_wrapped_cell_for_column<'a>(
             Cell::from(task.created.as_ref().map(|_| "N/A").unwrap_or("-"))
         }
         TaskColumn::Updated => {
-            // Note: updated is a string in the model, would need similar parsing  
+            // Note: updated is a string in the model, would need similar parsing
             Cell::from(task.updated.as_ref().map(|_| "N/A").unwrap_or("-"))
         }
     }
 }
 
-
+fn create_selected_cell_for_column<'a>(
+    task: &'a crate::opus::models::Task,
+    column: &TableColumn,
+    app: &'a App,
+    width: u16,
+) -> Cell<'a> {
+    use crate::opus::models::Priority;
+    match &column.column_type {
+        TaskColumn::Title => {
+            let mut spans = Vec::new();
+            if task.done {
+                spans.push(Span::raw("✓ "));
+            }
+            if !matches!(task.priority, Priority::NoPriority) {
+                spans.push(Span::raw("\u{f024} "));
+            }
+            let (indent_level, hierarchy_prefix) = app.get_task_hierarchy_info(task);
+            if indent_level > 0 {
+                spans.push(Span::raw(" ".repeat(indent_level)));
+            }
+            if !hierarchy_prefix.is_empty() {
+                spans.push(Span::raw(hierarchy_prefix));
+            }
+            spans.push(Span::raw(&task.title));
+            let mut cell = Cell::from(Line::from(spans));
+            if task.done {
+                cell = cell.style(Style::default().add_modifier(Modifier::CROSSED_OUT));
+            }
+            cell
+        }
+        TaskColumn::Project => {
+            let project_name = app.project_map.get(&task.project_id)
+                .cloned()
+                .unwrap_or_else(|| "Unknown".to_string());
+            let truncated = if project_name.len() > width as usize {
+                format!("{}…", &project_name[..width.saturating_sub(1) as usize])
+            } else {
+                project_name
+            };
+            Cell::from(truncated)
+        }
+        TaskColumn::Labels => {
+            if let Some(labels) = &task.labels {
+                let text = labels.iter().map(|l| l.name.as_str()).collect::<Vec<_>>().join(", ");
+                Cell::from(text)
+            } else {
+                Cell::from("")
+            }
+        }
+        TaskColumn::DueDate => Cell::from(format_date(&task.due_date)),
+        TaskColumn::StartDate => Cell::from(format_date(&task.start_date)),
+        TaskColumn::Priority => {
+            let flag_icon = "\u{f024} ";
+            match &task.priority {
+                Priority::Urgent => Cell::from(format!("{}urgent", flag_icon)),
+                Priority::High => Cell::from(format!("{}high", flag_icon)),
+                Priority::Medium => Cell::from(format!("{}medium", flag_icon)),
+                Priority::Low => Cell::from(format!("{}low", flag_icon)),
+                Priority::NoPriority => Cell::from("-"),
+            }
+        }
+        TaskColumn::Status => {
+            Cell::from(if task.done { "Done" } else { "Open" })
+        }
+        TaskColumn::Assignees => {
+            let assignees = task.assignees.as_ref()
+                .map(|assignees| {
+                    assignees.iter()
+                        .map(|a| a.name.as_str())
+                        .collect::<Vec<&str>>()
+                        .join(", ")
+                })
+                .unwrap_or_else(|| "-".to_string());
+            let truncated = if assignees.len() > width as usize {
+                format!("{}…", &assignees[..width.saturating_sub(1) as usize])
+            } else {
+                assignees
+            };
+            Cell::from(truncated)
+        }
+        TaskColumn::Created => Cell::from(task.created.as_ref().map(|_| "N/A").unwrap_or("-")),
+        TaskColumn::Updated => Cell::from(task.updated.as_ref().map(|_| "N/A").unwrap_or("-")),
+    }
+}
 
 pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
     let columns = app.get_current_layout_columns();
@@ -324,7 +407,7 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
     let column_widths = calculate_column_widths(&enabled_columns, &app.tasks, app, available_width);
     
     let header_cells: Vec<Cell> = enabled_columns.iter()
-        .map(|col| Cell::from(col.name.as_str()).style(Style::default().fg(Color::Red)))
+        .map(|col| Cell::from(col.name.as_str()).style(Style::default().fg(Color::Cyan)))
         .collect();
     let header = Row::new(header_cells).height(1).bottom_margin(1);
 
@@ -373,27 +456,18 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
         .skip(start)
         .take(end - start)
         .map(|(i, task)| {
-            // Create cells for each enabled column with proper width and wrapping
+            let is_selected = i == app.selected_task_index;
             let cells: Vec<Cell> = enabled_columns.iter()
                 .zip(column_widths.iter())
-            .map(|(col, &width)| {
-                    // Peek-on-hover for date columns: show relative when not selected, calendar when selected
-                    if matches!(col.column_type, TaskColumn::DueDate) {
-                        // DueDate column: relative by default, calendar on hover
-                        if i == app.selected_task_index {
-                            Cell::from(format_date(&task.due_date))
-                        } else {
-                            let (rel, color) = format_date_relative(&task.due_date);
-                            Cell::from(rel).style(Style::default().fg(color))
-                        }
+                .map(|(col, &width)| {
+                    if is_selected {
+                        create_selected_cell_for_column(task, col, app, width)
+                    } else if matches!(col.column_type, TaskColumn::DueDate) {
+                        let (rel, color) = format_date_relative(&task.due_date);
+                        Cell::from(rel).style(Style::default().fg(color))
                     } else if matches!(col.column_type, TaskColumn::StartDate) {
-                        // StartDate column: relative by default, calendar on hover
-                        if i == app.selected_task_index {
-                            Cell::from(format_date(&task.start_date)).style(Style::default().fg(Color::Cyan))
-                        } else {
-                            let (rel, color) = format_date_relative(&task.start_date);
-                            Cell::from(rel).style(Style::default().fg(color))
-                        }
+                        let (rel, color) = format_date_relative(&task.start_date);
+                        Cell::from(rel).style(Style::default().fg(color))
                     } else {
                         create_wrapped_cell_for_column(task, col, app, width)
                     }
@@ -431,12 +505,11 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
             }
             
             // Apply selection, flash, and alternating row styling
-            if i == app.selected_task_index {
-                // Selected row takes priority over alternating colors
+            if is_selected {
                 if let Some(bg) = flash_bg {
                     row = row.style(Style::default().bg(bg).add_modifier(Modifier::BOLD));
                 } else {
-                    row = row.style(Style::default().bg(Color::DarkGray));
+                    row = row.style(Style::default().bg(Color::Cyan).add_modifier(Modifier::BOLD));
                 }
             } else if let Some(bg) = flash_bg {
                 // Flash effect takes priority over alternating colors

@@ -203,13 +203,13 @@ impl CommentsModal {
             let timestamp = format!(" - {}", comment.created_at.format("%Y-%m-%d %H:%M"));
 
             let author_style = if is_selected {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD).bg(Color::DarkGray)
+                Style::default().fg(Color::Black).add_modifier(Modifier::BOLD).bg(Color::Cyan)
             } else {
                 Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
             };
 
             let timestamp_style = if is_selected {
-                Style::default().fg(Color::Gray).bg(Color::DarkGray)
+                Style::default().fg(Color::Black).bg(Color::Cyan)
             } else {
                 Style::default().fg(Color::Gray)
             };
@@ -224,7 +224,7 @@ impl CommentsModal {
 
             for (line_idx, line) in content_lines.iter().enumerate() {
                 let content_style = if is_selected {
-                    Style::default().fg(Color::White).bg(Color::DarkGray)
+                    Style::default().fg(Color::Black).bg(Color::Cyan)
                 } else {
                     Style::default().fg(Color::White)
                 };
