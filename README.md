@@ -15,7 +15,19 @@ A fast, keyboard-driven TUI for [Opus](https://opus.example.com) project managem
 ## Install
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/FacileStudio/opus-cli/main/install.sh | bash
+```
+
+Or build from source:
+
+```sh
 cargo install --path .
+```
+
+Update to latest:
+
+```sh
+opus upgrade
 ```
 
 ## Setup

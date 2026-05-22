@@ -15,7 +15,63 @@ mod url_utils;
 use crate::debug::debug_log;
 use crate::ui_loop::run_ui;
 
+fn run_upgrade() {
+    use std::process::{Command as Cmd, Stdio};
+
+    const REPO: &str = "https://github.com/FacileStudio/opus-cli.git";
+
+    let cyan = "\x1b[0;36m\x1b[1m";
+    let green = "\x1b[0;32m\x1b[1m";
+    let red = "\x1b[0;31m\x1b[1m";
+    let reset = "\x1b[0m";
+
+    let tmpdir = std::env::temp_dir().join(format!("opus-upgrade-{}", std::process::id()));
+
+    let cleanup = |dir: &std::path::Path| {
+        let _ = std::fs::remove_dir_all(dir);
+    };
+
+    eprintln!("{cyan}▸{reset} Cloning latest opus-cli...");
+    let git = Cmd::new("git")
+        .args(["clone", "--depth", "1", "--quiet", REPO])
+        .arg(&tmpdir)
+        .stdout(Stdio::null())
+        .status();
+
+    match git {
+        Ok(s) if s.success() => {}
+        _ => {
+            cleanup(&tmpdir);
+            eprintln!("{red}✗{reset} git clone failed");
+            std::process::exit(1);
+        }
+    }
+
+    eprintln!("{cyan}▸{reset} Building (release)...");
+    let cargo = Cmd::new("cargo")
+        .args(["install", "--path", tmpdir.to_str().unwrap(), "--force", "--quiet"])
+        .status();
+
+    cleanup(&tmpdir);
+
+    match cargo {
+        Ok(s) if s.success() => {
+            eprintln!("{green}✓{reset} opus upgraded to latest version");
+        }
+        _ => {
+            eprintln!("{red}✗{reset} cargo install failed");
+            std::process::exit(1);
+        }
+    }
+}
+
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 && args[1] == "upgrade" {
+        run_upgrade();
+        return;
+    }
+
     dotenv::dotenv().ok();
 
     let matches = Command::new("opus")
