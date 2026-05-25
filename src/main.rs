@@ -49,7 +49,7 @@ fn run_upgrade() {
 
     eprintln!("{cyan}▸{reset} Building (release)...");
     let cargo = Cmd::new("cargo")
-        .args(["install", "--path", tmpdir.to_str().unwrap(), "--force", "--quiet"])
+        .args(["install", "--path", tmpdir.to_str().unwrap(), "--force"])
         .status();
 
     cleanup(&tmpdir);
