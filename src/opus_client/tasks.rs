@@ -162,11 +162,21 @@ impl super::OpusClient {
         let url = format!("{}/api/task/{}", self.base_url, project_id);
         debug_log(&format!("Making POST request to: {}", url));
 
+        let mut body = serde_json::to_value(task).unwrap_or_default();
+        if let serde_json::Value::Object(ref mut map) = body {
+            map.entry("description".to_string())
+                .or_insert(serde_json::Value::String(String::new()));
+            map.entry("priority".to_string())
+                .or_insert(serde_json::Value::String("no-priority".to_string()));
+            map.entry("status".to_string())
+                .or_insert(serde_json::Value::String("to-do".to_string()));
+        }
+
         let response = self
             .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(task)
+            .json(&body)
             .send()
             .await?;
 
