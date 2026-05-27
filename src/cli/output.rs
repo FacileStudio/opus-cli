@@ -257,8 +257,10 @@ fn print_task_table(tasks: &[Task], project_map: &HashMap<String, String>) {
     );
 
     for row in &rows {
-        let title_truncated = if row.title.len() > col_title {
-            format!("{}…", &row.title[..col_title.saturating_sub(1)])
+        let char_count = row.title.chars().count();
+        let title_truncated = if char_count > col_title {
+            let truncated: String = row.title.chars().take(col_title.saturating_sub(1)).collect();
+            format!("{truncated}\u{2026}")
         } else {
             row.title.clone()
         };

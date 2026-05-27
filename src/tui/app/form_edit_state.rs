@@ -56,7 +56,7 @@ mod tests {
         assert_eq!(parsed.labels, vec!["shopping"]);
         assert_eq!(parsed.assignees, vec!["john"]);
         assert_eq!(parsed.project, Some("personal".to_string()));
-        assert_eq!(parsed.priority, Some(2));
+        assert_eq!(parsed.priority, Some("medium".to_string()));
         assert!(parsed.due_date.is_some());
     }
 
