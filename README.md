@@ -43,6 +43,11 @@ Buy milk +Groceries *shopping !high due:tomorrow @alice
 | `r` | Refresh | `?` | Help |
 | `i` | Detail pane | `q`/`Q` | Quit / force quit |
 
+## AI agent integration
+
+`install.sh` auto-registers opus as an AI agent skill for Claude Code and Codex.
+After installation, AI coding assistants can use opus commands directly when you ask about tasks, projects, or assignments.
+
 ## License
 
 MIT
