@@ -83,3 +83,5 @@ config.yaml
 test-config.yaml
 
 downloads/
+
+CLAUDE.md
