@@ -388,11 +388,10 @@ async fn tokio_main(
 
     let client_clone = api_client.clone();
 
-    let workspaces = client_clone.lock().await.get_workspaces().await.unwrap_or_default();
-    debug_log(&format!("Fetched {} workspaces from API", workspaces.len()));
     {
         let mut app_guard = app.lock().await;
-        app_guard.set_available_workspaces(workspaces);
+        app_guard.load_workspaces_from_config();
+        debug_log(&format!("Loaded {} workspaces from config", app_guard.available_workspaces.len()));
     }
 
     let (tasks, project_map, project_colors) = client_clone.lock().await.get_tasks_with_projects().await.unwrap_or_default();
