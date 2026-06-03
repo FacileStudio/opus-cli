@@ -78,7 +78,6 @@ pub fn first_run_wizard() -> Option<OpusConfig> {
         table_columns: None,
         column_layouts: None,
         active_layout: None,
-        workspaces: None,
     };
 
     let config_path = {

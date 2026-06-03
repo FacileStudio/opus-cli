@@ -4,7 +4,7 @@ use crate::tui::utils::contains_ignore_case;
 impl App {
     pub fn show_workspace_picker(&mut self) {
         if self.available_workspaces.is_empty() {
-            self.show_toast("No workspaces configured. Add with: opus workspace add <id> --name <name>".to_string());
+            self.show_toast("No workspaces available".to_string());
             return;
         }
         self.close_all_modals();
@@ -67,8 +67,8 @@ impl App {
         }
     }
 
-    pub fn load_workspaces_from_config(&mut self) {
-        self.available_workspaces = self.config.get_workspaces();
+    pub fn set_available_workspaces(&mut self, workspaces: Vec<crate::opus::models::Workspace>) {
+        self.available_workspaces = workspaces;
         self.current_workspace_name = self.available_workspaces.iter()
             .find(|w| w.id == self.current_workspace_id)
             .map(|w| w.name.clone());

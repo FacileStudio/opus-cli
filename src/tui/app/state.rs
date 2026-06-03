@@ -156,7 +156,7 @@ pub struct App {
     pub selected_workspace_picker_index: usize,
     pub current_workspace_id: String,
     pub current_workspace_name: Option<String>,
-    pub available_workspaces: Vec<crate::config::WorkspaceEntry>,
+    pub available_workspaces: Vec<crate::opus::models::Workspace>,
     // Quit handling
     pub last_key_time: Option<DateTime<Local>>,
     pub consecutive_q_count: usize,

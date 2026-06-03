@@ -24,12 +24,6 @@ impl QuickAction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkspaceEntry {
-    pub id: String,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpusConfig {
     pub api_url: String,
     pub api_key: Option<String>,
@@ -42,8 +36,6 @@ pub struct OpusConfig {
     pub active_layout: Option<String>,
     pub refresh_interval_seconds: Option<u64>,
     pub auto_refresh: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workspaces: Option<Vec<WorkspaceEntry>>,
 }
 
 impl Default for OpusConfig {
@@ -60,49 +52,6 @@ impl Default for OpusConfig {
             active_layout: None,
             refresh_interval_seconds: Some(300),
             auto_refresh: Some(true),
-            workspaces: None,
-        }
-    }
-}
-
-impl OpusConfig {
-    pub fn get_workspaces(&self) -> Vec<WorkspaceEntry> {
-        self.workspaces.clone().unwrap_or_default()
-    }
-
-    pub fn add_workspace(&mut self, id: String, name: String) {
-        let workspaces = self.workspaces.get_or_insert_with(Vec::new);
-        if !workspaces.iter().any(|w| w.id == id) {
-            workspaces.push(WorkspaceEntry { id, name });
-        }
-    }
-
-    pub fn remove_workspace(&mut self, id_or_name: &str) -> bool {
-        if let Some(ref mut workspaces) = self.workspaces {
-            let before = workspaces.len();
-            workspaces.retain(|w| w.id != id_or_name && !w.name.eq_ignore_ascii_case(id_or_name));
-            before != workspaces.len()
-        } else {
-            false
-        }
-    }
-
-    pub fn find_workspace(&self, id_or_name: &str) -> Option<&WorkspaceEntry> {
-        self.workspaces.as_ref().and_then(|ws| {
-            ws.iter().find(|w| w.id == id_or_name || w.name.eq_ignore_ascii_case(id_or_name))
-        })
-    }
-
-    pub fn ensure_current_workspace_in_list(&mut self) {
-        if let Some(ref ws_id) = self.workspace_id {
-            if !ws_id.is_empty() {
-                let already = self.workspaces.as_ref()
-                    .map(|ws| ws.iter().any(|w| w.id == *ws_id))
-                    .unwrap_or(false);
-                if !already {
-                    self.add_workspace(ws_id.clone(), ws_id.clone());
-                }
-            }
         }
     }
 }
