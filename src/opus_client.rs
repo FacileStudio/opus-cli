@@ -50,6 +50,33 @@ impl OpusClient {
         &self.workspace_id
     }
 
+    pub fn set_workspace_id(&mut self, workspace_id: String) {
+        debug_log(&format!("Switching workspace to: {}", workspace_id));
+        self.workspace_id = workspace_id;
+    }
+
+    pub async fn get_workspaces(
+        &self,
+    ) -> Result<Vec<crate::opus::models::Workspace>, Box<dyn std::error::Error + Send + Sync>> {
+        let url = format!("{}/api/workspace", self.base_url);
+        debug_log(&format!("Fetching workspaces from: {}", url));
+        let response = self
+            .client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.auth_token))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            let workspaces: Vec<crate::opus::models::Workspace> = response.json().await?;
+            debug_log(&format!("Got {} workspaces", workspaces.len()));
+            Ok(workspaces)
+        } else {
+            let error_text = response.text().await.unwrap_or_default();
+            Err(format!("Failed to fetch workspaces: {} - {}", status, error_text).into())
+        }
+    }
+
     pub async fn test_connection(&self) -> ReqwestResult<bool> {
         debug_log(&format!("Testing connection to {}", self.base_url));
         let url = format!(

@@ -10,3 +10,4 @@ pub mod tasks;
 pub mod projects;
 pub mod labels;
 pub mod filters;
+pub mod workspaces;

@@ -75,6 +75,16 @@ impl OpusConfig {
         serde_yaml::from_str(&contents).ok()
     }
 
+    pub fn save(&self) -> Result<(), String> {
+        let config_path = dirs::home_dir()
+            .map(|mut h| { h.push(".opus.yml"); h })
+            .ok_or_else(|| "Cannot determine home directory".to_string())?;
+        let yaml = serde_yaml::to_string(self)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
+        std::fs::write(&config_path, yaml)
+            .map_err(|e| format!("Failed to write config to {}: {}", config_path.display(), e))
+    }
+
     pub fn has_api_key_config(&self) -> bool {
         self.api_key
             .as_ref()

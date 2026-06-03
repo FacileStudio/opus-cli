@@ -14,7 +14,7 @@ use super::task_list::draw_tasks_table;
 use super::task_details::draw_task_details;
 use super::modals::{draw_quick_add_modal, draw_edit_modal, draw_confirmation_dialog, draw_quick_actions_modal, draw_add_subtask_modal, draw_subtask_modal};
 use super::form_edit::draw_form_edit_modal;
-use super::pickers::{draw_project_picker_modal, draw_filter_picker_modal, draw_label_picker_modal};
+use super::pickers::{draw_project_picker_modal, draw_filter_picker_modal, draw_label_picker_modal, draw_workspace_picker_modal};
 
 pub fn hex_to_color(hex: &str) -> Color {
     let hex = hex.trim_start_matches('#');
@@ -93,6 +93,8 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_confirmation_dialog(f, app);
     } else if app.show_filter_picker {
         draw_filter_picker_modal(f, app);
+    } else if app.show_workspace_picker {
+        draw_workspace_picker_modal(f, app);
     } else if app.show_quick_actions_modal {
         draw_quick_actions_modal(f, app);
     } else if app.show_attachment_modal {
@@ -111,18 +113,31 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_add_subtask_modal(f, app);
     }
 
-    if app.refreshing {
-        let refresh_area = Rect {
+    {
+        let status_area = Rect {
             x: 0,
             y: f.size().height.saturating_sub(1),
             width: f.size().width,
             height: 1,
         };
-        let refresh_msg = Paragraph::new("Refreshing...")
-            .style(Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD))
-            .alignment(Alignment::Center);
-        f.render_widget(Clear, refresh_area);
-        f.render_widget(refresh_msg, refresh_area);
+
+        if app.refreshing {
+            let refresh_msg = Paragraph::new("Refreshing...")
+                .style(Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD))
+                .alignment(Alignment::Center);
+            f.render_widget(Clear, status_area);
+            f.render_widget(refresh_msg, status_area);
+        } else {
+            let ws_name = app.get_current_workspace_name();
+            let ws_text = format!(" {} ", ws_name);
+            let ws_span = Span::styled(ws_text, Style::default().fg(DIM_COLOR));
+            let status_line = Paragraph::new(Line::from(vec![
+                Span::styled(" W ", Style::default().fg(Color::Black).bg(DIM_COLOR).add_modifier(Modifier::BOLD)),
+                ws_span,
+            ]));
+            f.render_widget(Clear, status_area);
+            f.render_widget(status_line, status_area);
+        }
     }
 
     if let Some(notification) = app.get_layout_notification() {

@@ -142,6 +142,59 @@ pub fn draw_label_picker_modal(f: &mut Frame, app: &App) {
     }
 }
 
+pub fn draw_workspace_picker_modal(f: &mut Frame, app: &App) {
+    let area = f.size();
+    let modal_width = (area.width as f32 * 0.6) as u16;
+    let modal_height = (area.height as f32 * 0.7) as u16;
+    let x = (area.width.saturating_sub(modal_width)) / 2;
+    let y = (area.height.saturating_sub(modal_height)) / 2;
+    let modal_area = Rect { x, y, width: modal_width, height: modal_height };
+    f.render_widget(Clear, modal_area);
+    let modal_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(3),
+        ])
+        .split(modal_area);
+    let input_block = Block::default()
+        .borders(Borders::ALL)
+        .title("Filter Workspaces (type to search)")
+        .title_alignment(Alignment::Center)
+        .style(Style::default().fg(Color::Cyan));
+    let input_paragraph = Paragraph::new(app.workspace_picker_input.as_str())
+        .block(input_block)
+        .style(Style::default().fg(Color::Yellow));
+    f.render_widget(input_paragraph, modal_chunks[0]);
+    let mut workspace_lines = Vec::new();
+    for (i, (wid, name)) in app.filtered_workspaces.iter().enumerate() {
+        let is_selected = i == app.selected_workspace_picker_index;
+        let is_current = *wid == app.current_workspace_id;
+        let display = if is_current { format!("{} (current)", name) } else { name.clone() };
+        let style = if is_selected {
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+        } else if is_current {
+            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        workspace_lines.push(Line::from(vec![Span::styled(display, style)]));
+    }
+    let list_block = Block::default()
+        .borders(Borders::ALL)
+        .title("Select Workspace (Enter to confirm, Esc to cancel)")
+        .title_alignment(Alignment::Center);
+    let list_paragraph = Paragraph::new(workspace_lines)
+        .block(list_block)
+        .wrap(Wrap { trim: false });
+    f.render_widget(list_paragraph, modal_chunks[1]);
+    let cursor_x = modal_chunks[0].x + 1 + app.workspace_picker_input.len() as u16;
+    let cursor_y = modal_chunks[0].y + 1;
+    if cursor_x < modal_chunks[0].x + modal_chunks[0].width - 1 {
+        f.set_cursor(cursor_x, cursor_y);
+    }
+}
+
 pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
     let area = f.size();
     let modal_width = (area.width as f32 * 0.6) as u16;

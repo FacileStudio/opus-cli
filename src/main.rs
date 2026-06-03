@@ -98,13 +98,23 @@ fn main() {
                 .value_name("TASK_STRING")
                 .num_args(1)
         )
+        .arg(
+            Arg::new("workspace")
+                .long("workspace")
+                .short('w')
+                .help("Override workspace ID for this session")
+                .value_name("ID")
+        )
         .subcommand(cli::task::subcommand())
+        .subcommand(cli::workspace::subcommand())
         .get_matches();
+
+    let workspace_override = matches.get_one::<String>("workspace").cloned();
 
     if let Some(quick_str) = matches.get_one::<String>("quick") {
         let use_env = matches.get_flag("dev-env");
         let config_path = matches.get_one::<String>("config");
-        let (api_url, api_key, workspace_id, default_project, _config) = if use_env {
+        let (api_url, api_key, mut workspace_id, default_project, _config) = if use_env {
             (
                 std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
                 std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
@@ -140,6 +150,7 @@ fn main() {
                 }
             }
         };
+        if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
 
         let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let api_client = crate::opus_client::OpusClient::new(
@@ -168,7 +179,7 @@ fn main() {
     if let Some(("task", sub_matches)) = matches.subcommand() {
         let use_env = matches.get_flag("dev-env");
         let config_path = matches.get_one::<String>("config");
-        let (api_url, api_key, workspace_id, default_project) = if use_env {
+        let (api_url, api_key, mut workspace_id, default_project) = if use_env {
             (
                 std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
                 std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
@@ -202,11 +213,60 @@ fn main() {
                 }
             }
         };
+        if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
 
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {
             let client = crate::opus_client::OpusClient::new(api_url, api_key, workspace_id);
             cli::task::handle(&client, sub_matches, &default_project).await
+        });
+        if let Err(e) = &result {
+            eprintln!("Error: {}", e);
+        }
+        std::process::exit(if result.is_ok() { 0 } else { 1 });
+    }
+
+    if let Some(("workspace", sub_matches)) = matches.subcommand() {
+        let use_env = matches.get_flag("dev-env");
+        let config_path = matches.get_one::<String>("config");
+        let (api_url, api_key, mut workspace_id, mut config) = if use_env {
+            (
+                std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
+                std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
+                std::env::var("OPUS_WORKSPACE_ID").unwrap_or_else(|_| String::new()),
+                None,
+            )
+        } else {
+            match crate::config::OpusConfig::load_from_path(config_path.map(|s| s.as_str())) {
+                Some(cfg) => {
+                    if cfg.has_api_key_config() {
+                        match cfg.get_api_key() {
+                            Ok(api_key) => {
+                                let ws = cfg.workspace_id.clone().unwrap_or_default();
+                                (cfg.api_url.clone(), api_key, ws, Some(cfg))
+                            }
+                            Err(e) => {
+                                eprintln!("Error loading API key: {}", e);
+                                std::process::exit(1);
+                            }
+                        }
+                    } else {
+                        eprintln!("No API key configured. Run `opus` to start setup.");
+                        std::process::exit(1);
+                    }
+                },
+                None => {
+                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
+                    std::process::exit(1);
+                }
+            }
+        };
+        if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            let client = crate::opus_client::OpusClient::new(api_url, api_key, workspace_id.clone());
+            cli::workspace::handle(&client, sub_matches, &workspace_id, &mut config).await
         });
         if let Err(e) = &result {
             eprintln!("Error: {}", e);
@@ -225,7 +285,7 @@ fn main() {
     let use_env = matches.get_flag("dev-env");
     let config_path = matches.get_one::<String>("config");
 
-    let (api_url, api_key, workspace_id, default_project, config) = if use_env {
+    let (api_url, api_key, mut workspace_id, default_project, config) = if use_env {
         debug_log("Using environment variables for API config");
         (
             std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
@@ -282,6 +342,8 @@ fn main() {
         }
     };
 
+    if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
+
     if let Err(e) = tokio_main(api_url, api_key, workspace_id, default_project, config) {
         eprintln!("Application error: {e}");
         std::process::exit(1);
@@ -325,6 +387,13 @@ async fn tokio_main(
     }
 
     let client_clone = api_client.clone();
+
+    let workspaces = client_clone.lock().await.get_workspaces().await.unwrap_or_default();
+    debug_log(&format!("Fetched {} workspaces from API", workspaces.len()));
+    {
+        let mut app_guard = app.lock().await;
+        app_guard.set_available_workspaces(workspaces);
+    }
 
     let (tasks, project_map, project_colors) = client_clone.lock().await.get_tasks_with_projects().await.unwrap_or_default();
     debug_log(&format!("Fetched {} tasks from API", tasks.len()));

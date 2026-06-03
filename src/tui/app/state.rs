@@ -149,6 +149,14 @@ pub struct App {
     pub toast_notification: Option<String>,
     pub toast_notification_start: Option<DateTime<Local>>,
     pub picker_context: PickerContext,
+    // Workspace picker modal state
+    pub show_workspace_picker: bool,
+    pub workspace_picker_input: String,
+    pub filtered_workspaces: Vec<(String, String)>,
+    pub selected_workspace_picker_index: usize,
+    pub current_workspace_id: String,
+    pub current_workspace_name: Option<String>,
+    pub available_workspaces: Vec<crate::opus::models::Workspace>,
     // Quit handling
     pub last_key_time: Option<DateTime<Local>>,
     pub consecutive_q_count: usize,
@@ -195,6 +203,7 @@ impl App {
     // ...existing code...
     pub fn new_with_config(config: OpusConfig, default_project_name: String) -> Self {
         let current_layout_name = config.get_active_layout_name();
+        let initial_workspace_id = config.workspace_id.clone().unwrap_or_default();
         Self {
             config,
             running: true, 
@@ -300,6 +309,13 @@ impl App {
             toast_notification: None,
             toast_notification_start: None,
             picker_context: PickerContext::None,
+            show_workspace_picker: false,
+            workspace_picker_input: String::new(),
+            filtered_workspaces: Vec::new(),
+            selected_workspace_picker_index: 0,
+            current_workspace_id: initial_workspace_id,
+            current_workspace_name: None,
+            available_workspaces: Vec::new(),
             last_key_time: None,
             consecutive_q_count: 0,
             // Relation modals - DISABLED: Incomplete feature  
@@ -775,6 +791,7 @@ impl App {
         self.show_project_picker = false;
         self.show_filter_picker = false;
         self.show_confirmation_dialog = false;
+        self.show_workspace_picker = false;
         self.show_attachment_modal = false;
         self.show_file_picker_modal = false;
         self.show_url_modal = false;

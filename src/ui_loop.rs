@@ -67,6 +67,11 @@ pub async fn run_ui(
                     let mut app_guard = app.lock().await;
                     crate::tui::pickers::filter::handle_filter_picker(&mut *app_guard, &key, &client_clone).await;
                     continue;
+                } else if app_guard.show_workspace_picker {
+                    drop(app_guard);
+                    let mut app_guard = app.lock().await;
+                    crate::tui::pickers::workspace::handle_workspace_picker(&mut *app_guard, &key, &client_clone).await;
+                    continue;
                 } else if app_guard.show_attachment_modal {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
@@ -848,6 +853,10 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         }
         Char('f') => {
             try_show_modal(app, terminal, |app| app.show_filter_picker());
+            true
+        }
+        Char('W') => {
+            try_show_modal(app, terminal, |app| app.show_workspace_picker());
             true
         }
         Char(' ') => {
