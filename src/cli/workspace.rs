@@ -28,9 +28,6 @@ pub fn subcommand() -> Command {
         )
 }
 
-const GREEN: &str = "\x1b[0;32m\x1b[1m";
-const DIM: &str = "\x1b[2m";
-const RESET: &str = "\x1b[0m";
 
 pub async fn handle(
     client: &OpusClient,
@@ -56,18 +53,18 @@ pub async fn handle(
                 }
                 output::OutputMode::Human => {
                     if workspaces.is_empty() {
-                        println!("{DIM}No workspaces found.{RESET}");
+                        crate::ui::step("No workspaces");
                         return Ok(());
                     }
 
-                    println!("{DIM}   NAME                            ID{RESET}");
+                    println!("{}", crate::ui::dim("   NAME                            ID"));
                     for w in &workspaces {
                         let is_current = w.id == current_workspace_id;
                         let marker = if is_current { " *" } else { "  " };
                         if is_current {
-                            println!("{GREEN}{marker}{RESET} {:<30}  {DIM}{}{RESET}", w.name, w.id);
+                            println!("{} {:<30}  {}", crate::ui::green(marker), w.name, crate::ui::dim(&w.id.to_string()));
                         } else {
-                            println!("{marker} {:<30}  {DIM}{}{RESET}", w.name, w.id);
+                            println!("{marker} {:<30}  {}", w.name, crate::ui::dim(&w.id.to_string()));
                         }
                     }
                 }
@@ -101,14 +98,14 @@ pub async fn handle(
                         cfg.workspace_id = Some(w.id.clone());
                         cfg.save().map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
                     }
-                    println!(
-                        "{GREEN}\u{2713}{RESET} Switched to workspace: {} ({})",
+                    crate::ui::success(&format!(
+                        "Switched to workspace: {} ({})",
                         w.name, w.id
-                    );
+                    ));
                     Ok(())
                 }
                 None => {
-                    eprintln!("Workspace '{}' not found. Available workspaces:", name);
+                    crate::ui::error(&format!("workspace '{}' not found — available workspaces:", name));
                     for w in &workspaces {
                         eprintln!("  - {} ({})", w.name, w.id);
                     }

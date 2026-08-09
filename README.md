@@ -34,9 +34,9 @@ Tasks are written in an inline "magic" syntax — `Review proposal +"Client Work
 curl -fsSL https://raw.githubusercontent.com/FacileStudio/opus-cli/main/install.sh | bash
 ```
 
-The installer needs `git` and `cargo` on `PATH`. It shallow-clones the repo, runs
-`cargo install --path`, and registers the AI agent skill described in
-[docs/usage.md](docs/usage.md). Without the installer:
+Installs to `~/.local/bin`. Pass `--bin-dir <dir>` to change that, `--source` to build from
+source, `--no-skill` to skip AI agent skill registration. Building from source needs `cargo`
+and `git` on `PATH`. The AI agent skill is described in [docs/usage.md](docs/usage.md).
 
 ```sh
 cargo install --git https://github.com/FacileStudio/opus-cli.git --force

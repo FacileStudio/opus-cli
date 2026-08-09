@@ -57,7 +57,7 @@ pub fn print_tasks(tasks: &[Task], mode: &OutputMode, project_map: &HashMap<Stri
         }
         OutputMode::Human => {
             if tasks.is_empty() {
-                println!("{DIM}No tasks found.{RESET}");
+                crate::ui::step("No tasks");
                 return;
             }
             print_task_table(tasks, project_map);
@@ -103,10 +103,11 @@ pub fn print_created_task(task: &Task, mode: &OutputMode) {
             println!("{}", task.id);
         }
         OutputMode::Human => {
-            println!(
-                "{GREEN}Created{RESET} #{} {BOLD}{}{RESET}",
-                task.number, task.title
-            );
+            crate::ui::success(&format!(
+                "Created #{} {}",
+                task.number,
+                crate::ui::bold(&task.title)
+            ));
         }
     }
 }

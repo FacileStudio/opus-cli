@@ -70,6 +70,36 @@ pub fn subcommand() -> Command {
                         .help("Task text (supports +project *label !priority due:date syntax)"),
                 ),
         )
+        .subcommand(
+            Command::new("done")
+                .about("Mark one or more tasks as done")
+                .arg(
+                    Arg::new("ids")
+                        .required(true)
+                        .num_args(1..)
+                        .help("Task ID(s) to mark as done"),
+                ),
+        )
+        .subcommand(
+            Command::new("undone")
+                .about("Mark one or more tasks as to-do")
+                .arg(
+                    Arg::new("ids")
+                        .required(true)
+                        .num_args(1..)
+                        .help("Task ID(s) to mark as to-do"),
+                ),
+        )
+        .subcommand(
+            Command::new("delete")
+                .about("Delete one or more tasks")
+                .arg(
+                    Arg::new("ids")
+                        .required(true)
+                        .num_args(1..)
+                        .help("Task ID(s) to delete"),
+                ),
+        )
 }
 
 pub async fn handle(
@@ -81,6 +111,9 @@ pub async fn handle(
         Some(("list", sub)) => handle_list(client, sub).await,
         Some(("show", sub)) => handle_show(client, sub).await,
         Some(("add", sub)) => handle_add(client, sub, default_project).await,
+        Some(("done", sub)) => handle_set_status(client, sub, "done").await,
+        Some(("undone", sub)) => handle_set_status(client, sub, "to-do").await,
+        Some(("delete", sub)) => handle_delete(client, sub).await,
         _ => unreachable!(),
     }
 }
@@ -199,5 +232,36 @@ async fn handle_add(
         .await?;
 
     output::print_created_task(&task, &mode);
+    Ok(())
+}
+
+async fn handle_set_status(
+    client: &OpusClient,
+    args: &clap::ArgMatches,
+    status: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let ids: Vec<&String> = args.get_many::<String>("ids").unwrap().collect();
+
+    for id in &ids {
+        match client.set_task_status(id, status).await {
+            Ok(task) => eprintln!("  {} → {}", task.title, status),
+            Err(e) => eprintln!("  {} failed: {}", id, e),
+        }
+    }
+    Ok(())
+}
+
+async fn handle_delete(
+    client: &OpusClient,
+    args: &clap::ArgMatches,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let ids: Vec<&String> = args.get_many::<String>("ids").unwrap().collect();
+
+    for id in &ids {
+        match client.delete_task(id).await {
+            Ok(()) => eprintln!("  {} deleted", id),
+            Err(e) => eprintln!("  {} failed: {}", id, e),
+        }
+    }
     Ok(())
 }

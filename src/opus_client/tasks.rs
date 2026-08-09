@@ -292,6 +292,30 @@ impl super::OpusClient {
         }
     }
 
+    pub async fn set_task_status(
+        &self,
+        task_id: &str,
+        status: &str,
+    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
+        let url = format!("{}/api/task/status/{}", self.base_url, task_id);
+        let payload = serde_json::json!({ "status": status });
+        let response = self
+            .client
+            .put(&url)
+            .header("Authorization", format!("Bearer {}", self.auth_token))
+            .json(&payload)
+            .send()
+            .await?;
+
+        let resp_status = response.status();
+        if resp_status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_text = response.text().await.unwrap_or_default();
+            Err(format!("Failed to set task status: {} - {}", resp_status, error_text).into())
+        }
+    }
+
     pub async fn update_task_priority(
         &self,
         task_id: &str,
