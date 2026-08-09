@@ -11,22 +11,34 @@ mod debug;
 mod config;
 mod cli;
 
-mod first_run;
 mod ui_loop;
 mod url_utils;
 
 use crate::debug::debug_log;
 use crate::ui_loop::run_ui;
 
+fn resolve_settings(
+    matches: &clap::ArgMatches,
+    workspace_override: Option<&str>,
+) -> config::Settings {
+    match config::Settings::resolve(
+        matches.get_one::<String>("config").map(|s| s.as_str()),
+        workspace_override,
+        matches.get_flag("dev-env"),
+    ) {
+        Ok(settings) => settings,
+        Err(e) => {
+            ui::error(&e);
+            std::process::exit(1);
+        }
+    }
+}
+
 fn run_upgrade() {
     use std::process::{Command as Cmd, Stdio};
 
     const REPO: &str = "https://github.com/FacileStudio/opus-cli.git";
 
-    let cyan = "\x1b[0;36m\x1b[1m";
-    let green = "\x1b[0;32m\x1b[1m";
-    let red = "\x1b[0;31m\x1b[1m";
-    let reset = "\x1b[0m";
 
     let tmpdir = std::env::temp_dir().join(format!("opus-upgrade-{}", std::process::id()));
 
@@ -34,7 +46,7 @@ fn run_upgrade() {
         let _ = std::fs::remove_dir_all(dir);
     };
 
-    eprintln!("{cyan}▸{reset} Cloning latest opus-cli...");
+    ui::step("Cloning latest opus-cli");
     let git = Cmd::new("git")
         .args(["clone", "--depth", "1", "--quiet", REPO])
         .arg(&tmpdir)
@@ -45,12 +57,12 @@ fn run_upgrade() {
         Ok(s) if s.success() => {}
         _ => {
             cleanup(&tmpdir);
-            eprintln!("{red}✗{reset} git clone failed");
+            ui::error("git clone failed");
             std::process::exit(1);
         }
     }
 
-    eprintln!("{cyan}▸{reset} Building (release)...");
+    ui::step("Building (release)");
     let cargo = Cmd::new("cargo")
         .args(["install", "--path", tmpdir.to_str().unwrap(), "--force"])
         .status();
@@ -59,10 +71,10 @@ fn run_upgrade() {
 
     match cargo {
         Ok(s) if s.success() => {
-            eprintln!("{green}✓{reset} opus upgraded to latest version");
+            ui::success("Upgraded to the latest version");
         }
         _ => {
-            eprintln!("{red}✗{reset} cargo install failed");
+            ui::error("cargo install failed");
             std::process::exit(1);
         }
     }
@@ -78,7 +90,7 @@ fn main() {
     dotenv::dotenv().ok();
 
     let matches = Command::new("opus")
-        .about("opus-cli - Terminal User Interface for Opus project management")
+        .about("Terminal client for Opus project management")
         .version(env!("CARGO_PKG_VERSION"))
         .arg(
             Arg::new("config")
@@ -90,7 +102,7 @@ fn main() {
         .arg(
             Arg::new("dev-env")
                 .long("dev-env")
-                .help("Use environment variables instead of config file")
+                .help("Run without a config file, falling back to localhost defaults")
                 .action(clap::ArgAction::SetTrue)
         )
         .arg(
@@ -107,52 +119,32 @@ fn main() {
                 .help("Override workspace ID for this session")
                 .value_name("ID")
         )
+        .arg(
+            Arg::new("no-color")
+                .long("no-color")
+                .help("Disable colored output")
+                .global(true)
+                .action(clap::ArgAction::SetTrue)
+        )
         .subcommand(cli::task::subcommand())
         .subcommand(cli::workspace::subcommand())
+        .subcommand(Command::new("upgrade").about("Upgrade opus to the latest version"))
         .get_matches();
+
+    if matches.get_flag("no-color") {
+        ui::disable_color();
+    }
 
     let workspace_override = matches.get_one::<String>("workspace").cloned();
 
     if let Some(quick_str) = matches.get_one::<String>("quick") {
-        let use_env = matches.get_flag("dev-env");
-        let config_path = matches.get_one::<String>("config");
-        let (api_url, api_key, mut workspace_id, default_project, _config) = if use_env {
-            (
-                std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
-                std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
-                std::env::var("OPUS_WORKSPACE_ID").unwrap_or_else(|_| String::new()),
-                std::env::var("OPUS_DEFAULT_PROJECT").unwrap_or_else(|_| "Inbox".to_string()),
-                None
-            )
-        } else {
-            match crate::config::OpusConfig::load_from_path(config_path.map(|s| s.as_str())) {
-                Some(cfg) => {
-                    if cfg.has_api_key_config() {
-                        match cfg.get_api_key() {
-                            Ok(api_key) => (
-                                cfg.api_url.clone(),
-                                api_key,
-                                cfg.workspace_id.clone().unwrap_or_default(),
-                                cfg.default_project.clone().unwrap_or_else(|| "Inbox".to_string()),
-                                Some(cfg),
-                            ),
-                            Err(e) => {
-                                eprintln!("Error loading API key: {}", e);
-                                std::process::exit(1);
-                            }
-                        }
-                    } else {
-                        eprintln!("No API key configured. Generate one from your Opus dashboard: Settings > Account > Developer");
-                        std::process::exit(1);
-                    }
-                },
-                None => {
-                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
-                    std::process::exit(1);
-                }
-            }
-        };
-        if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
+        let config::Settings {
+            api_url,
+            api_key,
+            workspace_id,
+            default_project,
+            ..
+        } = resolve_settings(&matches, workspace_override.as_deref());
 
         let result = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let api_client = crate::opus_client::OpusClient::new(
@@ -179,43 +171,13 @@ fn main() {
     }
 
     if let Some(("task", sub_matches)) = matches.subcommand() {
-        let use_env = matches.get_flag("dev-env");
-        let config_path = matches.get_one::<String>("config");
-        let (api_url, api_key, mut workspace_id, default_project) = if use_env {
-            (
-                std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
-                std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
-                std::env::var("OPUS_WORKSPACE_ID").unwrap_or_else(|_| String::new()),
-                std::env::var("OPUS_DEFAULT_PROJECT").unwrap_or_else(|_| "Inbox".to_string()),
-            )
-        } else {
-            match crate::config::OpusConfig::load_from_path(config_path.map(|s| s.as_str())) {
-                Some(cfg) => {
-                    if cfg.has_api_key_config() {
-                        match cfg.get_api_key() {
-                            Ok(api_key) => (
-                                cfg.api_url.clone(),
-                                api_key,
-                                cfg.workspace_id.clone().unwrap_or_default(),
-                                cfg.default_project.clone().unwrap_or_else(|| "Inbox".to_string()),
-                            ),
-                            Err(e) => {
-                                eprintln!("Error loading API key: {}", e);
-                                std::process::exit(1);
-                            }
-                        }
-                    } else {
-                        eprintln!("No API key configured. Run `opus` to start setup.");
-                        std::process::exit(1);
-                    }
-                },
-                None => {
-                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
-                    std::process::exit(1);
-                }
-            }
-        };
-        if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
+        let config::Settings {
+            api_url,
+            api_key,
+            workspace_id,
+            default_project,
+            ..
+        } = resolve_settings(&matches, workspace_override.as_deref());
 
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {
@@ -223,47 +185,19 @@ fn main() {
             cli::task::handle(&client, sub_matches, &default_project).await
         });
         if let Err(e) = &result {
-            eprintln!("Error: {}", e);
+            ui::error(&format!("{e}"));
         }
         std::process::exit(if result.is_ok() { 0 } else { 1 });
     }
 
     if let Some(("workspace", sub_matches)) = matches.subcommand() {
-        let use_env = matches.get_flag("dev-env");
-        let config_path = matches.get_one::<String>("config");
-        let (api_url, api_key, mut workspace_id, mut config) = if use_env {
-            (
-                std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
-                std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
-                std::env::var("OPUS_WORKSPACE_ID").unwrap_or_else(|_| String::new()),
-                None,
-            )
-        } else {
-            match crate::config::OpusConfig::load_from_path(config_path.map(|s| s.as_str())) {
-                Some(cfg) => {
-                    if cfg.has_api_key_config() {
-                        match cfg.get_api_key() {
-                            Ok(api_key) => {
-                                let ws = cfg.workspace_id.clone().unwrap_or_default();
-                                (cfg.api_url.clone(), api_key, ws, Some(cfg))
-                            }
-                            Err(e) => {
-                                eprintln!("Error loading API key: {}", e);
-                                std::process::exit(1);
-                            }
-                        }
-                    } else {
-                        eprintln!("No API key configured. Run `opus` to start setup.");
-                        std::process::exit(1);
-                    }
-                },
-                None => {
-                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
-                    std::process::exit(1);
-                }
-            }
-        };
-        if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
+        let config::Settings {
+            api_url,
+            api_key,
+            workspace_id,
+            mut config,
+            ..
+        } = resolve_settings(&matches, workspace_override.as_deref());
 
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {
@@ -271,7 +205,7 @@ fn main() {
             cli::workspace::handle(&client, sub_matches, &workspace_id, &mut config).await
         });
         if let Err(e) = &result {
-            eprintln!("Error: {}", e);
+            ui::error(&format!("{e}"));
         }
         std::process::exit(if result.is_ok() { 0 } else { 1 });
     }
@@ -284,70 +218,17 @@ fn main() {
     debug_log(&format!("  OPUS_WORKSPACE_ID: {:?}", std::env::var("OPUS_WORKSPACE_ID")));
     debug_log(&format!("  OPUS_DEFAULT_PROJECT: {:?}", std::env::var("OPUS_DEFAULT_PROJECT")));
 
-    let use_env = matches.get_flag("dev-env");
-    let config_path = matches.get_one::<String>("config");
-
-    let (api_url, api_key, mut workspace_id, default_project, config) = if use_env {
-        debug_log("Using environment variables for API config");
-        (
-            std::env::var("OPUS_API_URL").unwrap_or_else(|_| "http://localhost:1337".to_string()),
-            std::env::var("OPUS_API_KEY").unwrap_or_else(|_| "demo-token".to_string()),
-            std::env::var("OPUS_WORKSPACE_ID").unwrap_or_else(|_| String::new()),
-            std::env::var("OPUS_DEFAULT_PROJECT").unwrap_or_else(|_| "Inbox".to_string()),
-            None
-        )
-    } else {
-        match crate::config::OpusConfig::load_from_path(config_path.map(|s| s.as_str())) {
-            Some(cfg) => {
-                let config_source = if let Some(path) = config_path {
-                    format!("custom path: {}", path)
-                } else {
-                    "default location".to_string()
-                };
-                debug_log(&format!("Loaded config from {}: api_url={}, api_key=***", config_source, cfg.api_url));
-                if cfg.has_api_key_config() {
-                    match cfg.get_api_key() {
-                        Ok(api_key) => (
-                            cfg.api_url.clone(),
-                            api_key,
-                            cfg.workspace_id.clone().unwrap_or_default(),
-                            cfg.default_project.clone().unwrap_or_else(|| "Inbox".to_string()),
-                            Some(cfg),
-                        ),
-                        Err(e) => {
-                            eprintln!("Error loading API key: {}", e);
-                            std::process::exit(1);
-                        }
-                    }
-                } else {
-                    debug_log("Config exists but no API key configured");
-                    eprintln!("No API key configured. Generate one from your Opus dashboard: Settings > Account > Developer");
-                    std::process::exit(1);
-                }
-            },
-            None => {
-                let error_msg = if let Some(path) = config_path {
-                    format!("Config file not found at: {}", path)
-                } else {
-                    "No config found at default location".to_string()
-                };
-                debug_log(&error_msg);
-
-                if config_path.is_some() {
-                    eprintln!("Error: {}", error_msg);
-                    std::process::exit(1);
-                } else {
-                    eprintln!("No config found. Run `opus` to start setup, or create ~/.opus.yml");
-                    std::process::exit(1);
-                }
-            }
-        }
-    };
-
-    if let Some(ref ws) = workspace_override { workspace_id = ws.clone(); }
+    let config::Settings {
+        api_url,
+        api_key,
+        workspace_id,
+        default_project,
+        config,
+    } = resolve_settings(&matches, workspace_override.as_deref());
+    debug_log(&format!("Resolved api_url={api_url}, api_key=***"));
 
     if let Err(e) = tokio_main(api_url, api_key, workspace_id, default_project, config) {
-        eprintln!("Application error: {e}");
+        ui::error(&format!("{e}"));
         std::process::exit(1);
     }
 }
@@ -369,7 +250,7 @@ async fn tokio_main(
     let api_client = Arc::new(Mutex::new(OpusClient::new(api_url, api_key, workspace_id)));
 
     let config_clone = config.clone();
-    let app = Arc::new(Mutex::new(App::new_with_config(config.expect("Config required"), default_project.clone())));
+    let app = Arc::new(Mutex::new(App::new_with_config(config.unwrap_or_default(), default_project.clone())));
 
     {
         let api_client_guard = api_client.lock().await;
