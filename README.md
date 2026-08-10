@@ -16,7 +16,6 @@ Tasks are written in an inline "magic" syntax — `Review proposal +"Client Work
 - Project, filter, label and workspace pickers with fuzzy input
 - Task comments, attachments and subtask relations from inside the TUI
 - Undo and redo local task edits with `Ctrl-Z` and `Ctrl-Y`
-- Self-updates from the GitHub repository with `opus upgrade`
 
 ## Stack
 
@@ -34,15 +33,15 @@ Tasks are written in an inline "magic" syntax — `Review proposal +"Client Work
 curl -fsSL https://raw.githubusercontent.com/FacileStudio/opus-cli/main/install.sh | bash
 ```
 
-Installs to `~/.local/bin`. Pass `--bin-dir <dir>` to change that, `--source` to build from
-source, `--no-skill` to skip AI agent skill registration. Building from source needs `cargo`
-and `git` on `PATH`. The AI agent skill is described in [docs/usage.md](docs/usage.md).
+Installs to `~/.local/bin` via [facile](https://github.com/FacileStudio/facile), the suite
+installer. Pass `--bin-dir <dir>` to change that, `--source` to build from source, `--no-skill`
+to skip AI agent skill registration.
+
+Already have `facile`:
 
 ```sh
-cargo install --git https://github.com/FacileStudio/opus-cli.git --force
+facile install opus
 ```
-
-Update in place with `opus upgrade`.
 
 ## Usage
 
