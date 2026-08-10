@@ -34,59 +34,7 @@ fn resolve_settings(
     }
 }
 
-fn run_upgrade() {
-    use std::process::{Command as Cmd, Stdio};
-
-    const REPO: &str = "https://github.com/FacileStudio/opus-cli.git";
-
-
-    let tmpdir = std::env::temp_dir().join(format!("opus-upgrade-{}", std::process::id()));
-
-    let cleanup = |dir: &std::path::Path| {
-        let _ = std::fs::remove_dir_all(dir);
-    };
-
-    ui::step("Cloning latest opus-cli");
-    let git = Cmd::new("git")
-        .args(["clone", "--depth", "1", "--quiet", REPO])
-        .arg(&tmpdir)
-        .stdout(Stdio::null())
-        .status();
-
-    match git {
-        Ok(s) if s.success() => {}
-        _ => {
-            cleanup(&tmpdir);
-            ui::error("git clone failed");
-            std::process::exit(1);
-        }
-    }
-
-    ui::step("Building (release)");
-    let cargo = Cmd::new("cargo")
-        .args(["install", "--path", tmpdir.to_str().unwrap(), "--force"])
-        .status();
-
-    cleanup(&tmpdir);
-
-    match cargo {
-        Ok(s) if s.success() => {
-            ui::success("Upgraded to the latest version");
-        }
-        _ => {
-            ui::error("cargo install failed");
-            std::process::exit(1);
-        }
-    }
-}
-
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && args[1] == "upgrade" {
-        run_upgrade();
-        return;
-    }
-
     dotenv::dotenv().ok();
 
     let matches = Command::new("opus")
@@ -128,7 +76,6 @@ fn main() {
         )
         .subcommand(cli::task::subcommand())
         .subcommand(cli::workspace::subcommand())
-        .subcommand(Command::new("upgrade").about("Upgrade opus to the latest version"))
         .get_matches();
 
     if matches.get_flag("no-color") {
