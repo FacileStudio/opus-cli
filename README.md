@@ -83,7 +83,7 @@ Generate the key in the Opus dashboard under Settings > Account > Developer. Ful
 
 ```
 src/
-  main.rs         clap tree, upgrade shortcut, config resolution, TUI bootstrap
+  main.rs         clap tree, config resolution, TUI bootstrap
   config.rs       ~/.opus.yml model: layouts, columns, quick actions
   opus_parser.rs  the inline magic-syntax parser
   opus_client/    REST client split by resource: tasks, projects, labels, filters
