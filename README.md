@@ -1,6 +1,6 @@
 # opus-cli
 
-Keyboard-driven terminal client for [Opus](https://github.com/FacileStudio/Opus), the
+Keyboard-driven terminal client for Opus, the
 self-hosted project management app. The `opus` binary opens a full-screen TUI by default and
 also exposes scriptable `task` and `workspace` subcommands.
 
