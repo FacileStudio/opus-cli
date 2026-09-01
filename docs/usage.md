@@ -161,10 +161,64 @@ opus workspace switch studio
 opus workspace switch 01H8XK...
 ```
 
-Matches the argument against workspace ID, name or slug — case-insensitive for name and slug.
+Matches the argument against workspace ID, name or slug, case-insensitive for name and slug.
 On a match it writes `workspace_id` to `~/.opus.yml` and prints a confirmation. On no match it
 lists the available workspaces on stderr and exits 1. Under `--dev-env` there is no config
 object to persist to, so the switch prints its confirmation without saving.
+
+## `opus keys`
+
+Manage API keys for programmatic access to the Opus API.
+
+`keys` requires a subcommand.
+
+### `opus keys list`
+
+```sh
+opus keys list
+opus keys list --app web
+opus keys list --json
+```
+
+Lists API keys, displaying ID, application name, kind (secret or public), prefix, status (active or revoked), quota, and creation date.
+
+| Flag | Value | What it does |
+|---|---|---|
+| `--app <NAME>` | string | Filter keys by application name |
+| `--json` | — | Output raw JSON list |
+
+### `opus keys create`
+
+```sh
+opus keys create --app web
+opus keys create --app web --public --origins http://localhost:3000,https://app.example.com --quota 1000
+opus keys create --app my-service --json
+```
+
+Creates a new API key and prints the raw token once. Save this token immediately because the server hashes it and cannot display it again.
+
+| Flag | Value | What it does |
+|---|---|---|
+| `--app <NAME>` | string | Application name (required) |
+| `--public` | — | Create a public browser key instead of a secret key |
+| `--origins <URLS>` | comma-separated strings | Allowed CORS origins for public keys |
+| `--quota <N>` | integer | Daily request quota for public keys |
+| `--json` | — | Output response as JSON |
+
+### `opus keys revoke`
+
+```sh
+opus keys revoke 42
+opus keys revoke 42 --yes
+opus keys revoke 42 --json
+```
+
+Revokes an existing API key by ID. Prompts for confirmation unless `--yes` is supplied.
+
+| Flag | Value | What it does |
+|---|---|---|
+| `-y`, `--yes` | — | Confirm revocation without interactive prompt |
+| `--json` | — | Output revocation confirmation as JSON |
 
 ## `opus upgrade`
 

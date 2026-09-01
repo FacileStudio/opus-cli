@@ -337,3 +337,46 @@ pub struct FileAttachment {
     pub mime: Option<String>,
     pub size: Option<i64>,
 }
+
+fn is_zero_quota(quota: &i32) -> bool {
+    *quota <= 0
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct Key {
+    pub id: i64,
+    pub app: String,
+    pub kind: String,
+    pub prefix: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allowed_origins: Vec<String>,
+    #[serde(default)]
+    pub daily_quota: i32,
+    #[serde(default)]
+    pub used_today: i64,
+    pub created_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revoked_at: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct CreateKeyRequest {
+    pub app: String,
+    pub kind: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allowed_origins: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_zero_quota")]
+    pub daily_quota: i32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct CreateKeyResponse {
+    pub key: Key,
+    pub token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ListKeysResponse {
+    #[serde(default)]
+    pub keys: Vec<Key>,
+}

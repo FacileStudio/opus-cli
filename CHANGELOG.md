@@ -10,6 +10,14 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-01
+
+### Added
+
+- API key management command group: `opus keys list`, `opus keys create`, and `opus keys revoke`.
+- Support for filtering keys by application, configuring allowed origins, and setting daily request quotas.
+- JSON output mode across all `opus keys` subcommands.
+
 ## [0.1.0] — 2026-08-10
 
 ### Added
@@ -42,5 +50,6 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FacileStudio/opus-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FacileStudio/opus-cli/releases/tag/v0.1.0

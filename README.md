@@ -2,10 +2,10 @@
 
 Keyboard-driven terminal client for Opus, the
 self-hosted project management app. The `opus` binary opens a full-screen TUI by default and
-also exposes scriptable `task` and `workspace` subcommands.
+also exposes scriptable `task`, `workspace`, and `keys` subcommands.
 
-Tasks are written in an inline "magic" syntax — `Review proposal +"Client Work" *urgent
-@jane next monday !4` — parsed locally before the task is created.
+Tasks are written in an inline "magic" syntax, such as `Review proposal +"Client Work" *urgent
+@jane next monday !4`, parsed locally before the task is created.
 
 ## What it does
 
@@ -13,6 +13,7 @@ Tasks are written in an inline "magic" syntax — `Review proposal +"Client Work
 - Quick-add and edit tasks in inline syntax: project, labels, assignees, priority, dates, repeats
 - Create, list, show, complete and delete tasks from the shell, with `--json` output
 - List, inspect and switch workspaces, persisting the choice to the config file
+- Manage API keys (list, create secret or public keys, revoke) with JSON output
 - Project, filter, label and workspace pickers with fuzzy input
 - Task comments, attachments and subtask relations from inside the TUI
 - Undo and redo local task edits with `Ctrl-Z` and `Ctrl-Y`
@@ -53,6 +54,9 @@ opus task show <task-id> --json
 opus task add "Ship the release +Internal !u next friday"
 opus workspace list
 opus workspace switch studio
+opus keys list
+opus keys create --app web --public --origins http://localhost:3000
+opus keys revoke 1 --yes
 ```
 
 Full command reference, inline syntax and TUI keybindings: [docs/usage.md](docs/usage.md).
@@ -86,8 +90,8 @@ src/
   main.rs         clap tree, config resolution, TUI bootstrap
   config.rs       ~/.opus.yml model: layouts, columns, quick actions
   opus_parser.rs  the inline magic-syntax parser
-  opus_client/    REST client split by resource: tasks, projects, labels, filters
-  cli/            non-interactive subcommands and the human/JSON/quiet printers
+  opus_client/    REST client split by resource: tasks, projects, keys, labels, filters
+  cli/            non-interactive subcommands (task, workspace, keys) and printers
   tui/            app state, modals, pickers, ratatui rendering
   ui_loop.rs      the TUI event loop and global key dispatch
 integrations/     SKILL.md, registered with Claude Code and Codex by install.sh
@@ -104,5 +108,5 @@ integrations/     SKILL.md, registered with Claude Code and Codex by install.sh
 
 ---
 
-Part of the [Facile Suite](https://facile.studio) — self-hosted tools for creative studios
+Part of the [Facile Suite](https://facile.studio), self-hosted tools for creative studios
 and freelancers. One login, zero cloud dependency.

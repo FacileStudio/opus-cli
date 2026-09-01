@@ -76,6 +76,7 @@ fn main() {
         )
         .subcommand(cli::task::subcommand())
         .subcommand(cli::workspace::subcommand())
+        .subcommand(cli::keys::subcommand())
         .get_matches();
 
     if matches.get_flag("no-color") {
@@ -150,6 +151,25 @@ fn main() {
         let result = rt.block_on(async {
             let client = crate::opus_client::OpusClient::new(api_url, api_key, workspace_id.clone());
             cli::workspace::handle(&client, sub_matches, &workspace_id, &mut config).await
+        });
+        if let Err(e) = &result {
+            ui::error(&format!("{e}"));
+        }
+        std::process::exit(if result.is_ok() { 0 } else { 1 });
+    }
+
+    if let Some(("keys", sub_matches)) = matches.subcommand() {
+        let config::Settings {
+            api_url,
+            api_key,
+            workspace_id,
+            ..
+        } = resolve_settings(&matches, workspace_override.as_deref());
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            let client = crate::opus_client::OpusClient::new(api_url, api_key, workspace_id);
+            cli::keys::handle(&client, sub_matches).await
         });
         if let Err(e) = &result {
             ui::error(&format!("{e}"));

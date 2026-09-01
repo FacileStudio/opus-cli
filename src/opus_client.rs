@@ -9,6 +9,7 @@ pub mod users;
 pub mod labels;
 pub mod attachments;
 pub mod relations;
+pub mod keys;
 
 pub struct OpusClient {
     client: Client,
