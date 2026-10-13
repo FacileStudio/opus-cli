@@ -2,6 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use chrono::{DateTime, Datelike, Utc};
+use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
 fn deserialize_optional_datetime<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
@@ -22,6 +23,34 @@ where
             Err(_) => Ok(None),
         },
         None => Ok(None),
+    }
+}
+
+fn deserialize_id<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match serde_json::Value::deserialize(deserializer)? {
+        serde_json::Value::String(s) => Ok(s),
+        serde_json::Value::Number(n) => Ok(n.to_string()),
+        other => Err(D::Error::custom(format!(
+            "expected an id as string or number, got {other}"
+        ))),
+    }
+}
+
+fn deserialize_optional_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match serde_json::Value::deserialize(deserializer)? {
+        serde_json::Value::Null => Ok(None),
+        serde_json::Value::String(s) if s.is_empty() => Ok(None),
+        serde_json::Value::String(s) => Ok(Some(s)),
+        serde_json::Value::Number(n) => Ok(Some(n.to_string())),
+        other => Err(D::Error::custom(format!(
+            "expected an id as string or number, got {other}"
+        ))),
     }
 }
 
@@ -76,6 +105,7 @@ impl FromStr for Priority {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Workspace {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
     pub name: String,
     pub slug: String,
@@ -87,7 +117,9 @@ pub struct Workspace {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub workspace_id: String,
     pub name: String,
     pub slug: String,
@@ -112,7 +144,9 @@ impl Project {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Column {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub project_id: String,
     pub name: String,
     pub slug: String,
@@ -127,15 +161,15 @@ pub struct Column {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Label {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_id")]
     pub id: String,
     #[serde(default)]
     pub name: String,
     #[serde(default)]
     pub color: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub task_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub workspace_id: Option<String>,
     #[serde(default = "default_now")]
     pub created_at: DateTime<Utc>,
@@ -146,8 +180,10 @@ pub struct Label {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
+    #[serde(default, deserialize_with = "deserialize_id")]
     pub id: String,
     pub name: String,
+    #[serde(default)]
     pub email: String,
     pub image: Option<String>,
 }
@@ -155,8 +191,11 @@ pub struct User {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Comment {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub task_id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub user_id: String,
     pub content: String,
     pub user: Option<User>,
@@ -167,10 +206,13 @@ pub struct Comment {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Activity {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub task_id: String,
     #[serde(rename = "type")]
     pub activity_type: String,
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub user_id: Option<String>,
     pub content: Option<String>,
     pub event_data: Option<serde_json::Value>,
@@ -180,8 +222,11 @@ pub struct Activity {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskRelation {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub source_task_id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub target_task_id: String,
     pub relation_type: String,
     pub created_at: DateTime<Utc>,
@@ -190,14 +235,16 @@ pub struct TaskRelation {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(deserialize_with = "deserialize_id")]
     pub project_id: String,
     pub title: String,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default = "default_status")]
     pub status: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub column_id: Option<String>,
     #[serde(default)]
     pub priority: Priority,
@@ -205,7 +252,7 @@ pub struct Task {
     pub position: i32,
     #[serde(default)]
     pub number: i32,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub user_id: Option<String>,
     #[serde(
         default,
@@ -272,9 +319,7 @@ where
 
 impl Task {
     pub fn done(&self, columns: &[Column]) -> bool {
-        columns
-            .iter()
-            .any(|c| c.slug == self.status && c.is_final)
+        columns.iter().any(|c| c.slug == self.status && c.is_final)
     }
 
     pub fn is_assigned(&self) -> bool {
@@ -282,9 +327,7 @@ impl Task {
     }
 
     pub fn is_overdue(&self) -> bool {
-        self.due_date
-            .map(|d| d < Utc::now())
-            .unwrap_or(false)
+        self.due_date.map(|d| d < Utc::now()).unwrap_or(false)
     }
 }
 
@@ -321,7 +364,9 @@ impl Default for Task {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Attachment {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub task_id: Option<String>,
     pub filename: String,
     pub mime_type: Option<String>,
@@ -332,6 +377,7 @@ pub struct Attachment {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FileAttachment {
+    #[serde(deserialize_with = "deserialize_id")]
     pub id: String,
     pub name: Option<String>,
     pub mime: Option<String>,
@@ -379,4 +425,46 @@ pub struct CreateKeyResponse {
 pub struct ListKeysResponse {
     #[serde(default)]
     pub keys: Vec<Key>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deserializes_numeric_ids_as_strings() {
+        let task: Task = serde_json::from_str(
+            r#"{"id":7,"projectId":3,"title":"Ship it","status":"to-do","priority":"high","position":2,"number":5,"createdAt":"2026-10-13T00:00:00Z","updatedAt":"2026-10-13T00:00:00Z"}"#,
+        )
+        .unwrap();
+        assert_eq!(task.id, "7");
+        assert_eq!(task.project_id, "3");
+        assert_eq!(task.priority, Priority::High);
+    }
+
+    #[test]
+    fn deserializes_optional_ids_from_number_string_and_null() {
+        let task: Task = serde_json::from_str(
+            r#"{"id":1,"projectId":2,"title":"t","columnId":null,"userId":"9","createdAt":"2026-10-13T00:00:00Z","updatedAt":"2026-10-13T00:00:00Z"}"#,
+        )
+        .unwrap();
+        assert_eq!(task.column_id, None);
+        assert_eq!(task.user_id.as_deref(), Some("9"));
+
+        let workspace: Workspace = serde_json::from_str(
+            r#"{"id":42,"name":"Team","slug":"team","logo":null,"description":null,"createdAt":"2026-10-13T00:00:00Z"}"#,
+        )
+        .unwrap();
+        assert_eq!(workspace.id, "42");
+    }
+
+    #[test]
+    fn comment_author_without_id_or_email_still_parses() {
+        let comment: Comment = serde_json::from_str(
+            r#"{"id":4,"taskId":9,"userId":2,"content":"hi","createdAt":"2026-10-13T00:00:00Z","updatedAt":"2026-10-13T00:00:00Z","user":{"name":"Ann","image":""}}"#,
+        )
+        .unwrap();
+        assert_eq!(comment.id, "4");
+        assert_eq!(comment.user.map(|u| u.name), Some("Ann".to_string()));
+    }
 }

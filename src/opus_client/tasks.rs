@@ -1,9 +1,9 @@
+use crate::debug::debug_log;
+use crate::opus::models::{Column, Task};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
-use chrono::{DateTime, Utc};
-use crate::debug::debug_log;
-use crate::opus::models::{Task, Column};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,7 +57,6 @@ pub struct OpusTaskUpdate {
     pub column_id: Option<String>,
 }
 
-
 impl super::OpusClient {
     pub async fn create_task_with_magic(
         &self,
@@ -75,7 +74,10 @@ impl super::OpusClient {
             debug_log(&format!("Looking up project: '{}'.", project_name));
             match self.find_or_get_project_id(project_name).await {
                 Ok(Some(id)) => {
-                    debug_log(&format!("Found project ID: {} for project '{}'.", id, project_name));
+                    debug_log(&format!(
+                        "Found project ID: {} for project '{}'.",
+                        id, project_name
+                    ));
                     id
                 }
                 Ok(None) => {
@@ -119,7 +121,10 @@ impl super::OpusClient {
             debug_log(&format!("Processing label: '{}'", label_name));
             match self.ensure_label_exists(label_name).await {
                 Ok(label) => {
-                    debug_log(&format!("Label '{}' exists/created with ID: {}", label_name, label.id));
+                    debug_log(&format!(
+                        "Label '{}' exists/created with ID: {}",
+                        label_name, label.id
+                    ));
                     match self.attach_label(&label.id, &created_task.id).await {
                         Ok(_) => debug_log(&format!(
                             "Successfully added label '{}' to task {}",
@@ -191,7 +196,10 @@ impl super::OpusClient {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Failed to read error response".to_string());
-            debug_log(&format!("create_task API error ({}): {}", status, error_text));
+            debug_log(&format!(
+                "create_task API error ({}): {}",
+                status, error_text
+            ));
             Err(format!("Failed to create task: {} - {}", status, error_text).into())
         }
     }
@@ -210,7 +218,11 @@ impl super::OpusClient {
             Ok(response.json().await?)
         } else {
             let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to get task {}: {} - {}", task_id, status, error_text).into())
+            Err(format!(
+                "Failed to get task {}: {} - {}",
+                task_id, status, error_text
+            )
+            .into())
         }
     }
 
@@ -222,14 +234,34 @@ impl super::OpusClient {
         let url = format!("{}/api/task/{}", self.base_url, task_id);
         debug_log(&format!("Making PUT request to: {}", url));
 
-        let json_str = serde_json::to_string(update).unwrap_or_default();
+        let current = self.get_task(task_id).await?;
+        let payload = serde_json::json!({
+            "title": update
+                .title
+                .clone()
+                .unwrap_or_else(|| current.title.clone()),
+            "description": update
+                .description
+                .clone()
+                .or_else(|| current.description.clone()),
+            "status": current.status.clone(),
+            "priority": update
+                .priority
+                .clone()
+                .unwrap_or_else(|| current.priority.to_string()),
+            "dueDate": update.due_date.or(current.due_date),
+            "startDate": update.start_date.or(current.start_date),
+            "position": current.position,
+        });
+
+        let json_str = serde_json::to_string(&payload).unwrap_or_default();
         debug_log(&format!("update_task JSON payload: {}", json_str));
 
         let response = self
             .client
             .put(&url)
             .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(update)
+            .json(&payload)
             .send()
             .await?;
 
@@ -241,7 +273,10 @@ impl super::OpusClient {
             Ok(updated)
         } else {
             let error_text = response.text().await.unwrap_or_default();
-            debug_log(&format!("update_task API error ({}): {}", status, error_text));
+            debug_log(&format!(
+                "update_task API error ({}): {}",
+                status, error_text
+            ));
             Err(format!("Failed to update task: {} - {}", status, error_text).into())
         }
     }
@@ -260,7 +295,11 @@ impl super::OpusClient {
             Ok(())
         } else {
             let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to delete task {}: {} - {}", task_id, status, error_text).into())
+            Err(format!(
+                "Failed to delete task {}: {} - {}",
+                task_id, status, error_text
+            )
+            .into())
         }
     }
 
@@ -268,13 +307,9 @@ impl super::OpusClient {
         &self,
         task_id: &str,
         status: &str,
-        column_id: &str,
     ) -> Result<Task, Box<dyn Error + Send + Sync>> {
         let url = format!("{}/api/task/status/{}", self.base_url, task_id);
-        let payload = serde_json::json!({
-            "status": status,
-            "columnId": column_id,
-        });
+        let payload = serde_json::json!({ "status": status });
         let response = self
             .client
             .put(&url)
@@ -288,7 +323,11 @@ impl super::OpusClient {
             Ok(response.json().await?)
         } else {
             let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to update task status: {} - {}", resp_status, error_text).into())
+            Err(format!(
+                "Failed to update task status: {} - {}",
+                resp_status, error_text
+            )
+            .into())
         }
     }
 
@@ -312,7 +351,11 @@ impl super::OpusClient {
             Ok(response.json().await?)
         } else {
             let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to set task status: {} - {}", resp_status, error_text).into())
+            Err(format!(
+                "Failed to set task status: {} - {}",
+                resp_status, error_text
+            )
+            .into())
         }
     }
 
@@ -345,7 +388,7 @@ impl super::OpusClient {
         task_id: &str,
         user_id: &str,
     ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/assignee/{}", self.base_url, task_id);
+        let url = format!("{}/api/task/actor/{}", self.base_url, task_id);
         let payload = serde_json::json!({ "userId": user_id });
         let response = self
             .client
@@ -429,7 +472,7 @@ impl super::OpusClient {
         };
 
         match target_column {
-            Some(col) => self.update_task_status(task_id, &col.slug, &col.id).await,
+            Some(col) => self.update_task_status(task_id, &col.slug).await,
             None => Err("No suitable column found for status toggle".into()),
         }
     }
@@ -439,7 +482,10 @@ impl super::OpusClient {
         project_id: &str,
     ) -> Result<Vec<Task>, Box<dyn Error + Send + Sync>> {
         let url = format!("{}/api/task/tasks/{}", self.base_url, project_id);
-        debug_log(&format!("Fetching tasks for project {}: {}", project_id, url));
+        debug_log(&format!(
+            "Fetching tasks for project {}: {}",
+            project_id, url
+        ));
 
         let response = self
             .client
@@ -514,11 +560,7 @@ impl super::OpusClient {
     pub async fn get_tasks_with_projects(
         &self,
     ) -> Result<
-        (
-            Vec<Task>,
-            HashMap<String, String>,
-            HashMap<String, String>,
-        ),
+        (Vec<Task>, HashMap<String, String>, HashMap<String, String>),
         Box<dyn Error + Send + Sync>,
     > {
         let projects = self.get_all_projects().await?;
@@ -527,10 +569,7 @@ impl super::OpusClient {
         let mut project_colors = HashMap::new();
         for project in &projects {
             project_map.insert(project.id.clone(), project.name.clone());
-            let color = project
-                .icon
-                .clone()
-                .unwrap_or_default();
+            let color = project.icon.clone().unwrap_or_default();
             project_colors.insert(project.id.clone(), color);
         }
 
@@ -784,4 +823,3 @@ impl super::OpusClient {
         self.create_label(label_name, "#808080").await
     }
 }
-
