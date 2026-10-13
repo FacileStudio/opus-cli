@@ -10,6 +10,8 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-13
+
 ### Fixed
 
 - The client reads the int64 ids the Opus API emits. Every id and `*_id` field
@@ -64,6 +66,7 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/FacileStudio/opus-cli/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FacileStudio/opus-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FacileStudio/opus-cli/releases/tag/v0.1.0
