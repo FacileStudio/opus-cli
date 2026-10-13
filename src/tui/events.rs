@@ -14,7 +14,7 @@ pub struct EventHandler {
     sender: mpsc::Sender<Event>,
     receiver: mpsc::Receiver<Event>,
     #[allow(dead_code)]
-    handler: thread::JoinHandle<()>, 
+    handler: thread::JoinHandle<()>,
 }
 
 impl EventHandler {
@@ -52,3 +52,4 @@ impl EventHandler {
         self.receiver.recv()
     }
 }
+

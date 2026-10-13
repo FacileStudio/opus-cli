@@ -27,7 +27,7 @@ impl UrlModal {
             selected_index: 0,
         }
     }
-    
+
     pub fn handle_key(&mut self, key: char) -> UrlModalAction {
         let len = self.urls.len();
         match key {
@@ -54,7 +54,7 @@ impl UrlModal {
             _ => UrlModalAction::None,
         }
     }
-    
+
     pub fn handle_enter(&self) -> UrlModalAction {
         if let Some(url_context) = self.urls.get(self.selected_index) {
             UrlModalAction::OpenUrl(url_context.url.clone())
@@ -62,7 +62,7 @@ impl UrlModal {
             UrlModalAction::Cancel
         }
     }
-    
+
     pub fn handle_up(&mut self) {
         let len = self.urls.len();
         if len == 0 {
@@ -129,7 +129,7 @@ pub fn draw_url_modal(f: &mut Frame, modal: &UrlModal, area: Rect) {
             Constraint::Min(1),
         ])
         .split(inner_area);
-    
+
     // Instructions
     let instructions = Paragraph::new(vec![
         Line::from(vec![
@@ -144,9 +144,9 @@ pub fn draw_url_modal(f: &mut Frame, modal: &UrlModal, area: Rect) {
         ])
     ])
     .alignment(Alignment::Center);
-    
+
     f.render_widget(instructions, chunks[0]);
-    
+
     // URL list
     let items: Vec<ListItem> = modal.urls
         .iter()
@@ -157,15 +157,15 @@ pub fn draw_url_modal(f: &mut Frame, modal: &UrlModal, area: Rect) {
             } else {
                 Style::default()
             };
-            
+
             // Truncate URL if too long for display
-            let display_width = chunks[1].width.saturating_sub(4) as usize; // Account for padding
+            let display_width = chunks[1].width.saturating_sub(4) as usize;
             let truncated_url = if url_ctx.url.len() > display_width {
                 format!("{}...", &url_ctx.url[..display_width.saturating_sub(3)])
             } else {
                 url_ctx.url.clone()
             };
-            
+
             ListItem::new(vec![
                 Line::from(vec![
                     Span::styled(truncated_url, Style::default().fg(Color::Cyan)),
@@ -179,9 +179,10 @@ pub fn draw_url_modal(f: &mut Frame, modal: &UrlModal, area: Rect) {
             ]).style(style)
         })
         .collect();
-    
+
     let list = List::new(items)
         .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD));
-    
+
     f.render_widget(list, chunks[1]);
 }
+

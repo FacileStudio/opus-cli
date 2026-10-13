@@ -10,23 +10,23 @@ fn colorize_quickadd_input<'a>(input: &'a str, app: &'a App) -> Vec<ratatui::tex
     let mut spans = Vec::new();
     let mut chars = input.char_indices().peekable();
     let mut last = 0;
-    
+
     while let Some((i, c)) = chars.next() {
         if c == '*' || c == '+' {
             // Push previous text
             if last < i {
                 spans.push(ratatui::text::Span::raw(&input[last..i]));
             }
-            
+
             let start = i;
-            let mut end = start + 1; // Start after the '*' or '+'
-            
+            let mut end = start + 1;
+
             // Check if next character is '[' for bracketed syntax
             if let Some(&(_, '[')) = chars.peek() {
                 // Skip the '['
                 chars.next();
                 end += 1;
-                
+
                 // Find the closing ']'
                 while let Some(&(j, nc)) = chars.peek() {
                     chars.next();
@@ -45,7 +45,7 @@ fn colorize_quickadd_input<'a>(input: &'a str, app: &'a App) -> Vec<ratatui::tex
                     end = j + nc.len_utf8();
                 }
             }
-            
+
             let token = &input[start..end];
             if c == '*' {
                 // Label
@@ -61,7 +61,7 @@ fn colorize_quickadd_input<'a>(input: &'a str, app: &'a App) -> Vec<ratatui::tex
             last = end;
         }
     }
-    
+
     if last < input.len() {
         spans.push(ratatui::text::Span::raw(&input[last..]));
     }
@@ -76,7 +76,7 @@ pub fn draw_quick_add_modal(f: &mut Frame, app: &App) {
         return;
     }
     let modal_width = (area.width as f32 * 0.8) as u16;
-    let modal_height = 22; // Increased height for more space
+    let modal_height = 22;
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
@@ -85,9 +85,9 @@ pub fn draw_quick_add_modal(f: &mut Frame, app: &App) {
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Input field with title
-            Constraint::Length(6), // Suggestions (fixed height)
-            Constraint::Min(10),   // Help text
+            Constraint::Length(3),
+            Constraint::Length(6),
+            Constraint::Min(10),
         ])
         .split(modal_area);
     let input_text = app.get_quick_add_input();
@@ -108,7 +108,7 @@ pub fn draw_quick_add_modal(f: &mut Frame, app: &App) {
     }
     // Render suggestions in the reserved chunk
     if app.suggestion_mode.is_some() && !app.suggestions.is_empty() {
-        let max_visible = 4; // Match the visible lines in the UI
+        let max_visible = 4;
         let total = app.suggestions.len();
         let mut start = 0;
         let max_end = total.min(max_visible);
@@ -199,7 +199,7 @@ pub fn draw_quick_add_modal(f: &mut Frame, app: &App) {
 pub fn draw_edit_modal(f: &mut Frame, app: &App) {
     let area = f.size();
     let modal_width = (area.width as f32 * 0.8) as u16;
-    let modal_height = 22; // Match quick add modal height
+    let modal_height = 22;
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
@@ -208,9 +208,9 @@ pub fn draw_edit_modal(f: &mut Frame, app: &App) {
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Input field with title
-            Constraint::Length(6), // Suggestions (fixed height)
-            Constraint::Min(10),   // Help text
+            Constraint::Length(3),
+            Constraint::Length(6),
+            Constraint::Min(10),
         ])
         .split(modal_area);
     let input_text = app.get_edit_input();
@@ -396,7 +396,7 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
             help_lines.push(Line::raw("─ Quick Actions (Space for modal, . then key for direct) ─"));
             for action in quick_actions {
                 help_lines.push(Line::from(vec![
-                    Span::styled(format!("{}", action.key), Style::default().add_modifier(Modifier::BOLD)), 
+                    Span::styled(format!("{}", action.key), Style::default().add_modifier(Modifier::BOLD)),
                     Span::raw(format!(": {}", action.get_description()))
                 ]));
             }
@@ -467,35 +467,35 @@ pub fn draw_advanced_help_modal(f: &mut Frame, _app: &App) {
 
 pub fn draw_advanced_features_modal(f: &mut Frame, app: &App) {
     let area = f.size();
-    
+
     // Define advanced features
     let advanced_features = vec![
         ("a", "Attachment Management", "View and manage task attachments", true),
         ("c", "Comments", "View and add task comments", true),
         ("r", "Task Relations", "Manage task dependencies and links", false),
     ];
-    
+
     // Calculate modal size
     let num_features = advanced_features.len();
-    let base_height = 5; // borders, title, instructions
+    let base_height = 5;
     let feature_height = num_features as u16;
     let modal_height = (base_height + feature_height).min(area.height - 4);
     let modal_width = 70.min(area.width - 4);
-    
+
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     // Clear the area behind the modal
     f.render_widget(Clear, modal_area);
-    
+
     let mut lines = vec![];
-    
+
     lines.push(Line::from(vec![
         Span::raw("Select a feature (Enter to activate, Esc/q to cancel):")
     ]));
     lines.push(Line::raw(""));
-    
+
     for (i, (key, title, description, available)) in advanced_features.iter().enumerate() {
         let is_selected = i == app.selected_advanced_feature_index;
         let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
@@ -524,23 +524,23 @@ pub fn draw_advanced_features_modal(f: &mut Frame, app: &App) {
             ]));
         }
     }
-    
+
     lines.push(Line::raw(""));
     lines.push(Line::from(vec![
         Span::styled("Navigation: ", Style::default().fg(Color::Cyan)),
         Span::raw("↑/↓ to select, Enter to activate, Esc/q to cancel")
     ]));
-    
+
     let block = Block::default()
         .title(" Advanced Features ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
-    
+
     let para = Paragraph::new(lines)
         .block(block)
         .wrap(Wrap { trim: true })
         .alignment(Alignment::Left);
-    
+
     f.render_widget(para, modal_area);
 }
 
@@ -574,26 +574,26 @@ pub fn draw_sort_modal(f: &mut Frame, app: &App) {
 
 pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
     let area = f.size();
-    
+
     // Calculate modal size based on number of quick actions
     let quick_actions = app.config.quick_actions.as_ref();
     let num_actions = quick_actions.map(|qa| qa.len()).unwrap_or(0);
-    
+
     // Base height for borders, title, and instructions
     let base_height = 5;
     let action_height = num_actions as u16;
     let modal_height = (base_height + action_height).min(area.height - 4);
     let modal_width = 60.min(area.width - 4);
-    
+
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     // Clear the area behind the modal
     f.render_widget(Clear, modal_area);
-    
+
     let mut lines = vec![];
-    
+
     if let Some(ref quick_actions) = quick_actions {
         if quick_actions.is_empty() {
             lines.push(Line::from(vec![
@@ -610,7 +610,7 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
                 Span::styled("Available Quick Actions:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
             ]));
             lines.push(Line::raw(""));
-            
+
             for (i, action) in quick_actions.iter().enumerate() {
                 let is_selected = i == app.selected_quick_action_index;
                 let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
@@ -672,7 +672,7 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
             Span::raw(" file.")
         ]));
     }
-    
+
     lines.push(Line::raw(""));
     lines.push(Line::from(vec![
         Span::styled("↑/↓", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
@@ -682,17 +682,17 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
         Span::styled("Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
         Span::raw(" Cancel")
     ]));
-    
+
     let block = Block::default()
         .title(" Quick Actions ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
-    
+
     let paragraph = Paragraph::new(lines)
         .block(block)
         .wrap(Wrap { trim: true })
         .alignment(Alignment::Left);
-    
+
     f.render_widget(paragraph, modal_area);
 }
 
@@ -704,16 +704,16 @@ pub fn draw_relations_modal(f: &mut Frame, app: &App) {
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     f.render_widget(Clear, modal_area);
-    
+
     let block = Block::default()
         .title(" Task Relations ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
-    
+
     let mut lines = vec![];
-    
+
     if let Some(task_id) = app.relations_task_id {
         if let Some(task) = app.all_tasks.iter().find(|t| t.id == task_id) {
             lines.push(Line::from(vec![
@@ -721,7 +721,7 @@ pub fn draw_relations_modal(f: &mut Frame, app: &App) {
                 Span::styled(&task.title, Style::default().fg(Color::White))
             ]));
             lines.push(Line::raw(""));
-            
+
             if let Some(related_tasks) = &task.related_tasks {
                 if related_tasks.is_empty() {
                     lines.push(Line::from(vec![
@@ -742,11 +742,11 @@ pub fn draw_relations_modal(f: &mut Frame, app: &App) {
                                 "duplicates" => "📄 Duplicates",
                                 _ => relation_type,
                             };
-                            
+
                             lines.push(Line::from(vec![
                                 Span::styled(format!("{}: ", relation_kind), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
                             ]));
-                            
+
                             for related_task in tasks {
                                 let status_indicator = if related_task.done { "✓" } else { "○" };
                                 let task_style = if related_task.done {
@@ -756,7 +756,7 @@ pub fn draw_relations_modal(f: &mut Frame, app: &App) {
                                 } else {
                                     Style::default().fg(Color::White)
                                 };
-                                
+
                                 lines.push(Line::from(vec![
                                     Span::raw("  "),
                                     Span::styled(status_indicator, task_style),
@@ -776,7 +776,7 @@ pub fn draw_relations_modal(f: &mut Frame, app: &App) {
             }
         }
     }
-    
+
     lines.push(Line::raw(""));
     lines.push(Line::from(vec![
         Span::styled("a", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
@@ -788,12 +788,12 @@ pub fn draw_relations_modal(f: &mut Frame, app: &App) {
         Span::styled("Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
         Span::raw(" Close")
     ]));
-    
+
     let paragraph = Paragraph::new(lines)
         .block(block)
         .wrap(Wrap { trim: true })
         .alignment(Alignment::Left);
-    
+
     f.render_widget(paragraph, modal_area);
 }
 
@@ -804,9 +804,9 @@ pub fn draw_add_relation_modal(f: &mut Frame, app: &App) {
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     f.render_widget(Clear, modal_area);
-    
+
     // Split modal into sections
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -816,47 +816,47 @@ pub fn draw_add_relation_modal(f: &mut Frame, app: &App) {
             Constraint::Min(6),    // Help text
         ])
         .split(modal_area);
-    
+
     // Input field
     let input_block = Block::default()
         .borders(Borders::ALL)
         .title("Task ID or Title")
         .title_alignment(Alignment::Center)
         .style(Style::default().fg(Color::Green));
-    
+
     let input_paragraph = Paragraph::new(app.add_relation_input.as_str())
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
-    
+
     f.render_widget(input_paragraph, modal_chunks[0]);
-    
+
     // Set cursor position
     let cursor_x = modal_chunks[0].x + 1 + app.add_relation_cursor_position as u16;
     let cursor_y = modal_chunks[0].y + 1;
     if cursor_x < modal_chunks[0].x + modal_chunks[0].width - 1 {
         f.set_cursor(cursor_x, cursor_y);
     }
-    
+
     // Relation type selector
     let relation_text = if let Some(kind) = app.get_selected_relation_kind() {
         format!("Relation: {}", kind.display_name())
     } else {
         "Relation: None selected".to_string()
     };
-    
+
     let relation_block = Block::default()
         .borders(Borders::ALL)
         .title("Relation Type (↑/↓ to change)")
         .title_alignment(Alignment::Center)
         .style(Style::default().fg(Color::Blue));
-    
+
     let relation_paragraph = Paragraph::new(relation_text)
         .block(relation_block)
         .style(Style::default().fg(Color::Cyan))
         .alignment(Alignment::Center);
-    
+
     f.render_widget(relation_paragraph, modal_chunks[1]);
-    
+
     // Help text
     let help_text = vec![
         Line::from(vec![
@@ -879,16 +879,16 @@ pub fn draw_add_relation_modal(f: &mut Frame, app: &App) {
             Span::raw(" Cancel")
         ]),
     ];
-    
+
     let help_block = Block::default()
         .borders(Borders::ALL)
         .title("Help")
         .style(Style::default().fg(Color::Gray));
-    
+
     let help_paragraph = Paragraph::new(help_text)
         .block(help_block)
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(help_paragraph, modal_chunks[2]);
 }
 */
@@ -900,15 +900,15 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     f.render_widget(Clear, modal_area);
-    
+
     let title = match app.subtask_operation {
         Some(crate::tui::app::state::SubtaskOperation::AddSubtask) => " Create Subtask Relationship ",
         Some(crate::tui::app::state::SubtaskOperation::MakeSubtask) => " Make Task a Subtask ",
         None => " Subtask Operations ",
     };
-    
+
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
@@ -917,9 +917,9 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Input
-            Constraint::Min(8),    // Task list
-            Constraint::Length(3), // Help
+            Constraint::Length(3),
+            Constraint::Min(8),
+            Constraint::Length(3),
         ])
         .split(modal_area);
 
@@ -965,13 +965,13 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
             }
         }
     }
-    
+
     let list_paragraph = Paragraph::new(list_lines)
         .block(list_block)
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(list_paragraph, chunks[1]);
-    
+
     // Help text
     let help_text = vec![
         Line::from(vec![
@@ -983,18 +983,18 @@ pub fn draw_subtask_modal(f: &mut Frame, app: &App) {
             Span::raw(" Cancel")
         ])
     ];
-    
+
     let help_block = Block::default()
         .borders(Borders::ALL)
         .title("Help")
         .style(Style::default().fg(Color::Gray));
-    
+
     let help_paragraph = Paragraph::new(help_text)
         .block(help_block)
         .wrap(Wrap { trim: true });
-    
+
     f.render_widget(help_paragraph, chunks[2]);
-    
+
     f.render_widget(block, modal_area);
 }
 
@@ -1002,65 +1002,65 @@ pub fn draw_add_subtask_modal(f: &mut Frame, app: &App) {
     let area = f.size();
     let modal_width = (area.width as f32 * 0.6) as u16;
     let modal_height = 10;
-    
+
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     // Clear the area behind the modal
     f.render_widget(Clear, modal_area);
-    
+
     // Layout: parent task info (2), input (3), help (rest)
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(2), // Parent task info
-            Constraint::Length(3), // Input field
-            Constraint::Min(3),    // Help text
+            Constraint::Length(2),
+            Constraint::Length(3),
+            Constraint::Min(3),
         ])
         .split(modal_area);
-    
+
     // Show parent task info
     if let Some(parent_task) = app.get_selected_task() {
         let parent_info = Line::from(vec![
             Span::styled("Adding subtask to: ", Style::default().fg(Color::Gray)),
             Span::styled(&parent_task.title, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
         ]);
-        
+
         let parent_block = Block::default()
             .borders(Borders::LEFT | Borders::RIGHT | Borders::TOP)
             .style(Style::default().fg(Color::Cyan));
-        
+
         let parent_paragraph = Paragraph::new(vec![parent_info])
             .block(parent_block)
             .alignment(Alignment::Center);
-        
+
         f.render_widget(parent_paragraph, modal_chunks[0]);
     }
-    
+
     // Input field
     let input_text = app.get_add_subtask_input();
     let input_spans = vec![Span::raw(input_text)];
-    
+
     let input_block = Block::default()
         .borders(Borders::ALL)
         .title(" Subtask Title ")
         .title_alignment(Alignment::Center)
         .style(Style::default().fg(Color::Cyan));
-    
+
     let input_paragraph = Paragraph::new(vec![Line::from(input_spans)])
         .block(input_block)
         .style(Style::default().fg(Color::Yellow));
-    
+
     f.render_widget(input_paragraph, modal_chunks[1]);
-    
+
     // Set cursor position
     let cursor_x = modal_chunks[1].x + 1 + app.add_subtask_cursor_position as u16;
     let cursor_y = modal_chunks[1].y + 1;
     if cursor_x < modal_chunks[1].x + modal_chunks[1].width - 1 {
         f.set_cursor(cursor_x, cursor_y);
     }
-    
+
     // Help text
     let help_lines = vec![
         Line::from(vec![
@@ -1070,22 +1070,23 @@ pub fn draw_add_subtask_modal(f: &mut Frame, app: &App) {
             Span::raw(" Cancel")
         ])
     ];
-    
+
     let help_block = Block::default()
         .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
         .style(Style::default().fg(Color::Cyan));
-    
+
     let help_paragraph = Paragraph::new(help_lines)
         .block(help_block)
         .alignment(Alignment::Center);
-    
+
     f.render_widget(help_paragraph, modal_chunks[2]);
-    
+
     // Main border
     let main_block = Block::default()
         .title(" Add Subtask ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
-    
+
     f.render_widget(main_block, modal_area);
 }
+

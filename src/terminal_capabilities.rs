@@ -46,12 +46,12 @@ impl TerminalCapabilities {
         // Check for terminals that support images
         let image_supporting_terms = [
             "kitty",
-            "wezterm", 
+            "wezterm",
             "iTerm2",
             "terminology",
             "contour",
             "foot",
-            "alacritty", // with image protocol
+            "alacritty",
         ];
 
         // Check if terminal type matches known image-supporting terminals
@@ -61,11 +61,11 @@ impl TerminalCapabilities {
 
         // Check for specific environment variables
         if env::var("KITTY_WINDOW_ID").is_ok() {
-            return true; // Kitty terminal
+            return true;
         }
 
         if env::var("WEZTERM_PANE").is_ok() {
-            return true; // WezTerm
+            return true;
         }
 
         // Check for iTerm2
@@ -143,4 +143,4 @@ mod tests {
             Some("📄 [PDF Document]".to_string())
         );
     }
-} 
+}

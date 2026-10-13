@@ -24,7 +24,7 @@ pub async fn run_ui(
     let event_handler = EventHandler::new(250);
 
     loop {
-        
+
         {
             let app_guard = app.lock().await;
             terminal.draw(|f| draw(f, &app_guard))?;
@@ -98,7 +98,7 @@ pub async fn run_ui(
                                             modal.operation_message = "Downloading attachment...".to_string();
                                         }
                                     }
-                                    
+
                                     // Perform download
                                     // Determine download directory (prefer 'Downloads' or 'downloads')
                                     let download_dir = if std::path::Path::new("Downloads").exists() {
@@ -115,7 +115,7 @@ pub async fn run_ui(
                                     let out_path = std::path::Path::new(download_dir).join(&file_name);
                                     let download_result: Result<(), Box<dyn std::error::Error + Send + Sync>> =
                                         Err("Download not yet implemented".into());
-                                    
+
                                     // Update UI with result
                                     {
                                         let mut app_guard = app_clone.lock().await;
@@ -153,7 +153,7 @@ pub async fn run_ui(
 
                                     let remove_result: Result<(), Box<dyn std::error::Error + Send + Sync>> =
                                         Err("Remove not yet implemented".into());
-                                    
+
                                     // Update UI with result
                                     {
                                         let mut app_guard = app_clone.lock().await;
@@ -338,7 +338,7 @@ pub async fn run_ui(
                                                 let current_task_id = selected_task.id.clone();
                                                 let operation = app_guard.subtask_operation.clone();
                                                 app_guard.hide_subtask_modal();
-                                                
+
                                                 // Handle the subtask operation async
                                                 let client = client_clone.lock().await;
                                                 match operation {
@@ -512,7 +512,7 @@ pub async fn run_ui(
                         },
                         _ => {}
                     }
-                    continue; // Skip the regular key handling for Ctrl combinations
+                    continue;
                 }
 
                 // Handle confirmation dialog actions async (Enter/y)
@@ -550,7 +550,7 @@ pub async fn run_ui(
                     }
                     continue;
                 }
-                
+
                 // Handle file picker modal
                 if app_guard.show_file_picker_modal {
                     if let Some(ref mut modal) = app_guard.file_picker_modal {
@@ -562,7 +562,7 @@ pub async fn run_ui(
                                 continue;
                             }
                         }
-                        
+
                         // Handle key events
                         let action = match key.code {
                             crossterm::event::KeyCode::Char(c) => modal.handle_key(c),
@@ -581,7 +581,7 @@ pub async fn run_ui(
                             }
                             _ => crate::tui::modals::FilePickerAction::None,
                         };
-                        
+
                         match action {
                             crate::tui::modals::FilePickerAction::Select(file_path) => {
                                 // Handle file selection for upload
@@ -597,10 +597,10 @@ pub async fn run_ui(
                                     app_guard.show_toast("No task selected for upload".to_string());
                                     continue;
                                 };
-                                
+
                                 app_guard.hide_file_picker_modal();
                                 app_guard.show_toast(format!("Uploading {}...", file_path.file_name().unwrap_or_default().to_string_lossy()));
-                                
+
                                 tokio::spawn(async move {
                                     // Perform upload
                                     {
@@ -612,12 +612,12 @@ pub async fn run_ui(
                             crate::tui::modals::FilePickerAction::Navigate(new_path) => {
                                 modal.current_path = new_path;
                                 modal.selected_index = 0;
-                                modal.entries.clear();                  // reload entries immediately
+                                modal.entries.clear();
                                 modal.refresh_entries_sync();
                             }
                             crate::tui::modals::FilePickerAction::ToggleHidden => {
                                 modal.show_hidden = !modal.show_hidden;
-                                modal.entries.clear();                  // reload entries immediately
+                                modal.entries.clear();
                                 modal.refresh_entries_sync();
                             }
                             crate::tui::modals::FilePickerAction::Cancel => {
@@ -646,7 +646,7 @@ pub async fn run_ui(
                             crossterm::event::KeyCode::Esc => crate::tui::modals::UrlModalAction::Cancel,
                             _ => crate::tui::modals::UrlModalAction::None,
                         };
-                        
+
                         match action {
                             crate::tui::modals::UrlModalAction::OpenUrl(url) => {
                                 app_guard.hide_url_modal();
@@ -667,12 +667,12 @@ pub async fn run_ui(
                     }
                     continue;
                 }
-                
+
                 // handle dispatch_key and refresh
                 let key_handled = dispatch_key(&mut *app_guard, key, &terminal);
-                
+
                 // After any navigation key, check if we need to fetch detailed task data
-                if key_handled && (key.code == KeyCode::Up || key.code == KeyCode::Down || 
+                if key_handled && (key.code == KeyCode::Up || key.code == KeyCode::Down ||
                                   key.code == KeyCode::Char('j') || key.code == KeyCode::Char('k') ||
                                   key.code == KeyCode::Char('g') || key.code == KeyCode::Char('G')) {
                     if let Some(task) = app_guard.get_selected_task() {
@@ -690,7 +690,7 @@ pub async fn run_ui(
                         }
                     }
                 }
-                
+
                 if key_handled {
                     continue;
                 }
@@ -728,12 +728,12 @@ pub async fn run_ui(
 fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBackend<std::io::Stdout>>) -> bool {
     use crate::tui::modals::utils::try_show_modal;
     use KeyCode::*;
-    
+
     // Reset consecutive 'q' counter for any key other than 'q'
     if !matches!(key.code, KeyCode::Char('q')) {
         app.reset_q_counter();
     }
-    
+
     match key.code {
         KeyCode::Up => {
             if app.show_advanced_features_modal {
@@ -748,7 +748,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         }
         KeyCode::Down => {
             if app.show_advanced_features_modal {
-                let max_index = 2; // Number of advanced features - 1
+                let max_index = 2;
                 if app.selected_advanced_feature_index < max_index {
                     app.selected_advanced_feature_index += 1;
                 }
@@ -782,27 +782,27 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         Char('i') => { app.toggle_info_pane(); true }
         Char('x') => { app.toggle_debug_pane(); true }
         // Navigation: move selection down/up
-        Char('j') => { 
+        Char('j') => {
             if app.show_advanced_features_modal {
-                let max_index = 2; // Number of advanced features - 1
+                let max_index = 2;
                 if app.selected_advanced_feature_index < max_index {
                     app.selected_advanced_feature_index += 1;
                 }
                 true
             } else {
-                app.next_task(); 
-                true 
+                app.next_task();
+                true
             }
         }
-        Char('k') => { 
+        Char('k') => {
             if app.show_advanced_features_modal {
                 if app.selected_advanced_feature_index > 0 {
                     app.selected_advanced_feature_index -= 1;
                 }
                 true
             } else {
-                app.previous_task(); 
-                true 
+                app.previous_task();
+                true
             }
         }
         // Switch layouts backward/forward
@@ -832,8 +832,8 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
             crate::debug::debug_log("User pressed 'o' - attempting to open URLs from selected task");
             if let Some(basic_task) = app.get_selected_task() {
                 let task_to_use = app.get_detailed_task(&basic_task.id).unwrap_or(basic_task);
-                crate::debug::debug_log(&format!("Selected task: id={}, title={:?}, has_comments={}, using_detailed_cache={}", 
-                    task_to_use.id, task_to_use.title, task_to_use.comments.is_some(), 
+                crate::debug::debug_log(&format!("Selected task: id={}, title={:?}, has_comments={}, using_detailed_cache={}",
+                    task_to_use.id, task_to_use.title, task_to_use.comments.is_some(),
                     app.get_detailed_task(&basic_task.id).is_some()));
                 let urls = crate::url_utils::extract_urls_from_task(task_to_use);
                 crate::debug::debug_log(&format!("extract_urls_from_task returned {} URLs", urls.len()));
@@ -863,7 +863,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
             try_show_modal(app, terminal, |app| app.show_quick_actions_modal());
             true
         }
-        Char('a') => { 
+        Char('a') => {
             if app.show_advanced_features_modal {
                 try_show_modal(app, terminal, |app| { app.hide_advanced_features_modal(); app.show_attachment_modal(); });
                 true
@@ -880,7 +880,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
                 false
             }
         }
-        Char('r') => { 
+        Char('r') => {
             if app.show_advanced_features_modal {
                 // Direct activation of task relations
                 app.hide_advanced_features_modal();
@@ -891,20 +891,20 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
                 false
             }
         }
-        Char('h') => { 
+        Char('h') => {
             if app.show_advanced_features_modal {
                 // 'h' is no longer used in advanced modal, fallback to layout switching
                 app.hide_advanced_features_modal();
-                app.switch_to_previous_layout(); 
+                app.switch_to_previous_layout();
                 true
             } else {
-                app.switch_to_previous_layout(); 
-                true 
+                app.switch_to_previous_layout();
+                true
             }
         }
-        Char('s') => { 
-            /* async star toggle handled in event loop */ 
-            true 
+        Char('s') => {
+            /* async star toggle handled in event loop */
+            true
         }
         Enter => {
             if app.show_confirmation_dialog {
@@ -913,15 +913,15 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
             } else if app.show_advanced_features_modal {
                 // Handle advanced feature selection
                 match app.selected_advanced_feature_index {
-                    0 => { // Attachment Management
+                    0 => {
                         app.hide_advanced_features_modal();
                         app.show_attachment_modal();
                     }
-                    1 => { // Comments
+                    1 => {
                         app.hide_advanced_features_modal();
                         app.show_comments_modal();
                     }
-                    2 => { // Task Relations
+                    2 => {
                         app.hide_advanced_features_modal();
                         app.add_debug_message("Task relations feature requested".to_string());
                         app.show_toast("Task relations feature coming soon!".to_string());
@@ -954,7 +954,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         }
         Down => {
             if app.show_advanced_features_modal {
-                let max_index = 2; // Number of advanced features - 1
+                let max_index = 2;
                 if app.selected_advanced_feature_index < max_index {
                     app.selected_advanced_feature_index += 1;
                 }
@@ -991,26 +991,26 @@ async fn refresh_from_api(
     client: &Arc<Mutex<OpusClient>>,
 ) {
     app.refreshing = true;
-    
+
     // Save current filter state before refresh
     let current_filter_id = app.current_filter_id.clone();
     let current_project_id = app.current_project_id.clone();
     let current_task_filter = app.task_filter.clone();
     let active_project_override = app.active_project_override.clone();
-    
+
     let client = client.lock().await;
     match client.get_tasks_with_projects().await {
         Ok((tasks, project_map, project_colors)) => {
             app.all_tasks = tasks;
             app.project_map = project_map;
             app.project_colors = project_colors;
-            
+
             // Reapply the current filter state after refresh
             if let Some(filter_id) = current_filter_id {
                 // If a saved filter was active, reapply it
                 app.current_filter_id = Some(filter_id.clone());
                 app.active_project_override = active_project_override;
-                
+
                 // Fetch tasks for the filter
                 match client.get_tasks_for_filter(&filter_id).await {
                     Ok(filter_tasks) => {
@@ -1053,7 +1053,7 @@ async fn apply_quick_action_and_sync(
     match app.apply_quick_action(&action) {
         Ok(_) => {
             app.add_debug_message(format!("Quick action applied: {} -> {}", action.key, action.target));
-            
+
             // Update the task on the server - handle labels differently
             let selected_task = app.get_selected_task().cloned();
             if let Some(task) = selected_task {
@@ -1097,7 +1097,7 @@ async fn apply_quick_action_and_sync(
                         }
                     }
                 }
-                
+
                 // Add visual flash feedback
                 if let Some(task) = app.get_selected_task() {
                     app.flash_task_id = Some(task.id.clone());
@@ -1113,3 +1113,4 @@ async fn apply_quick_action_and_sync(
         }
     }
 }
+

@@ -6,7 +6,7 @@ pub fn clear_debug_log() {
     if std::env::var("OPUS_DEBUG").is_err() {
         return;
     }
-    
+
     // Truncate the log file to clear it
     if let Ok(_) = OpenOptions::new()
         .create(true)
@@ -25,7 +25,7 @@ pub fn debug_log(message: &str) {
     }
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
     let log_message = format!("[{}] {}\n", timestamp, message);
-    
+
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
@@ -35,3 +35,4 @@ pub fn debug_log(message: &str) {
         let _ = file.flush();
     }
 }
+

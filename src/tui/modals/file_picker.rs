@@ -39,7 +39,7 @@ impl FilePickerModal {
         let current_path = initial_path.unwrap_or_else(|| {
             std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
         });
-        
+
         Self {
             current_path,
             entries: Vec::new(),
@@ -50,7 +50,7 @@ impl FilePickerModal {
 
     pub async fn refresh_entries(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut entries = Vec::new();
-        
+
         // Add parent directory entry if not at root
         if self.current_path.parent().is_some() {
             entries.push(FileEntry {
@@ -61,7 +61,7 @@ impl FilePickerModal {
                 size: None,
             });
         }
-        
+
         // Read directory entries
         let mut read_dir = fs::read_dir(&self.current_path).await?;
         while let Some(entry) = read_dir.next_entry().await? {
@@ -70,17 +70,17 @@ impl FilePickerModal {
                 .and_then(|n| n.to_str())
                 .unwrap_or("???")
                 .to_string();
-            
+
             // Skip hidden files unless show_hidden is true
             if !self.show_hidden && name.starts_with('.') {
                 continue;
             }
-            
+
             let metadata = entry.metadata().await?;
             let is_dir = metadata.is_dir();
             let is_file = metadata.is_file();
             let size = if is_file { Some(metadata.len()) } else { None };
-            
+
             entries.push(FileEntry {
                 name,
                 path,
@@ -89,7 +89,7 @@ impl FilePickerModal {
                 size,
             });
         }
-        
+
         // Sort: directories first, then files, both alphabetically
         entries.sort_by(|a, b| {
             if a.is_dir != b.is_dir {
@@ -100,18 +100,18 @@ impl FilePickerModal {
                 a.name.to_lowercase().cmp(&b.name.to_lowercase())
             }
         });
-        
+
         self.entries = entries;
-        
+
         // Ensure selected_index is valid
         if !self.entries.is_empty() && self.selected_index >= self.entries.len() {
             self.selected_index = self.entries.len() - 1;
         }
-        
+
         Ok(())
     }
     // --- End of async refresh_entries ---
-    
+
     /// Synchronously load directory entries (for initial display)
     pub fn refresh_entries_sync(&mut self) {
         let mut entries = Vec::new();
@@ -214,25 +214,25 @@ impl FilePickerModal {
 
         let items: Vec<ListItem> = self.entries.iter().enumerate().map(|(i, entry)| {
             let is_selected = i == self.selected_index;
-            
+
             let icon = if entry.is_dir {
                 "📁"
             } else {
                 "📄"
             };
-            
+
             let name_style = if is_selected {
                 Style::default().fg(Color::Black).bg(Color::Blue).add_modifier(ratatui::style::Modifier::BOLD)
             } else {
                 Style::default()
             };
-            
+
             let size_text = if let Some(size) = entry.size {
                 format!(" ({})", self.format_size(size))
             } else {
                 String::new()
             };
-            
+
             let text = format!("{} {}{}", icon, entry.name, size_text);
             ListItem::new(text).style(name_style)
         }).collect();
@@ -240,7 +240,7 @@ impl FilePickerModal {
         let list = List::new(items)
             .block(block)
             .highlight_style(Style::default().fg(Color::Black).bg(Color::Blue).add_modifier(ratatui::style::Modifier::BOLD));
-        
+
         f.render_stateful_widget(list, area, &mut ratatui::widgets::ListState::default().with_selected(Some(self.selected_index)));
     }
 
@@ -297,7 +297,7 @@ impl FilePickerModal {
                 self.show_hidden = !self.show_hidden;
                 FilePickerAction::ToggleHidden
             }
-            'q' | 'Q' | '\x1b' => FilePickerAction::Cancel, // ESC key
+            'q' | 'Q' | '\x1b' => FilePickerAction::Cancel,
             _ => FilePickerAction::None,
         }
     }
@@ -306,7 +306,7 @@ impl FilePickerModal {
         if self.entries.is_empty() {
             return FilePickerAction::None;
         }
-        
+
         if let Some(entry) = self.entries.get(self.selected_index) {
             if entry.is_dir {
                 // Navigate to directory
@@ -328,7 +328,7 @@ impl FilePickerModal {
         const GB: f64 = MB * 1024.0;
 
         let size = size as f64;
-        
+
         if size >= GB {
             format!("{:.1} GB", size / GB)
         } else if size >= MB {

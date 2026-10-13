@@ -18,8 +18,8 @@ pub fn draw_project_picker_modal(f: &mut Frame, app: &App) {
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Input
-            Constraint::Min(3),   // List
+            Constraint::Length(3),
+            Constraint::Min(3),
         ])
         .split(modal_area);
     // Input field
@@ -71,18 +71,18 @@ pub fn draw_label_picker_modal(f: &mut Frame, app: &App) {
     let x = (area.width.saturating_sub(modal_width)) / 2;
     let y = (area.height.saturating_sub(modal_height)) / 2;
     let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    
+
     f.render_widget(Clear, modal_area);
-    
+
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Input
-            Constraint::Min(3),   // List
-            Constraint::Length(3), // Instructions
+            Constraint::Length(3),
+            Constraint::Min(3),
+            Constraint::Length(3),
         ])
         .split(modal_area);
-    
+
     // Input field
     let input_block = Block::default()
         .borders(Borders::ALL)
@@ -106,13 +106,13 @@ pub fn draw_label_picker_modal(f: &mut Frame, app: &App) {
             let color = app.label_colors.get(lid).map(|hex| hex_to_color(hex)).unwrap_or(Color::White);
             Style::default().fg(color)
         };
-        
+
         let checkbox = if is_checked { "[✓] " } else { "[ ] " };
         let display_text = format!("{}{}", checkbox, name);
-        
+
         label_lines.push(Line::from(vec![Span::styled(display_text, style)]));
     }
-    
+
     let list_block = Block::default()
         .borders(Borders::ALL)
         .title("Select Labels (Space to toggle, Enter to confirm, Esc to cancel)")
@@ -121,7 +121,7 @@ pub fn draw_label_picker_modal(f: &mut Frame, app: &App) {
         .block(list_block)
         .wrap(Wrap { trim: false });
     f.render_widget(list_paragraph, modal_chunks[1]);
-    
+
     // Instructions
     let selected_count = app.selected_label_ids.len();
     let instructions_text = format!("Selected: {} labels", selected_count);
@@ -133,7 +133,7 @@ pub fn draw_label_picker_modal(f: &mut Frame, app: &App) {
         .block(instructions_block)
         .style(Style::default().fg(Color::Cyan));
     f.render_widget(instructions_paragraph, modal_chunks[2]);
-    
+
     // Position cursor in input
     let cursor_x = modal_chunks[0].x + 1 + app.label_picker_input.len() as u16;
     let cursor_y = modal_chunks[0].y + 1;
@@ -206,8 +206,8 @@ pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
     let modal_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Input
-            Constraint::Min(3),   // List
+            Constraint::Length(3),
+            Constraint::Min(3),
         ])
         .split(modal_area);
     // Input field
@@ -233,14 +233,14 @@ pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
         };
         filter_lines.push(Line::from(vec![Span::styled(title, style)]));
     }
-    
+
     // Update title based on whether a filter is active
     let title = if app.current_filter_id.is_some() {
         "Select Saved Filter (Enter to confirm, Delete to clear current filter, Esc to cancel)"
     } else {
         "Select Saved Filter (Enter to confirm, Esc to cancel)"
     };
-    
+
     let list_block = Block::default()
         .borders(Borders::ALL)
         .title(title)
@@ -256,3 +256,4 @@ pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
         f.set_cursor(cursor_x, cursor_y);
     }
 }
+

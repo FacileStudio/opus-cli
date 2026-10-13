@@ -24,7 +24,7 @@ pub fn extract_urls(text: &str) -> Vec<String> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UrlWithContext {
     pub url: String,
-    pub source: String, // "Description" or "Comment by {author}"
+    pub source: String,
 }
 
 /// Extract URLs from task description and comments with context
@@ -32,7 +32,7 @@ pub fn extract_urls_from_task(task: &crate::opus::models::Task) -> Vec<UrlWithCo
     use std::collections::HashMap;
     let mut url_map: HashMap<String, UrlWithContext> = HashMap::new();
     let mut total_found = 0;
-    
+
     // Extract from task description
     if let Some(description) = &task.description {
         let description_urls = extract_urls(description);
@@ -44,7 +44,7 @@ pub fn extract_urls_from_task(task: &crate::opus::models::Task) -> Vec<UrlWithCo
             });
         }
     }
-    
+
     // Extract from comments
     if let Some(comments) = &task.comments {
         debug_log(&format!("Scanning {} comments for URLs", comments.len()));
@@ -70,10 +70,10 @@ pub fn extract_urls_from_task(task: &crate::opus::models::Task) -> Vec<UrlWithCo
             }
         }
     }
-    
+
     let unique_urls: Vec<UrlWithContext> = url_map.into_values().collect();
     debug_log(&format!("URL deduplication: {} total found, {} unique URLs after deduplication", total_found, unique_urls.len()));
-    
+
     unique_urls
 }
 
@@ -85,21 +85,21 @@ pub fn open_url(url: &str) -> Result<(), Box<dyn std::error::Error>> {
             .arg(url)
             .spawn()?;
     }
-    
+
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
             .arg(url)
             .spawn()?;
     }
-    
+
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("cmd")
             .args(["/c", "start", url])
             .spawn()?;
     }
-    
+
     Ok(())
 }
 
@@ -159,8 +159,8 @@ mod tests {
         let text = "HTTP://example.com and HTTPS://secure.com";
         let urls = extract_urls(text);
         // Our regex is case-sensitive for simplicity, but should handle common cases
-        assert_eq!(urls.len(), 0); // These won't match due to case sensitivity
-        
+        assert_eq!(urls.len(), 0);
+
         let text_lowercase = "http://example.com and https://secure.com";
         let urls_lowercase = extract_urls(text_lowercase);
         assert_eq!(urls_lowercase.len(), 2);
@@ -187,7 +187,7 @@ mod tests {
     fn test_extract_urls_from_task_with_description() {
         let mut task = create_test_task();
         task.description = Some("Check https://example.com for details".to_string());
-        
+
         let urls = extract_urls_from_task(&task);
         assert_eq!(urls.len(), 1);
         assert_eq!(urls[0].url, "https://example.com");
@@ -292,7 +292,7 @@ mod tests {
             url: "https://example.com".to_string(),
             source: "Test source".to_string(),
         };
-        
+
         assert_eq!(url_ctx.url, "https://example.com");
         assert_eq!(url_ctx.source, "Test source");
     }
@@ -303,7 +303,7 @@ mod tests {
             url: "https://example.com".to_string(),
             source: "Test source".to_string(),
         };
-        
+
         let cloned = original.clone();
         assert_eq!(original.url, cloned.url);
         assert_eq!(original.source, cloned.source);
@@ -316,19 +316,19 @@ mod tests {
         let urls = extract_urls(text);
         assert_eq!(urls.len(), 1);
         assert_eq!(urls[0], "https://example.com");
-        
+
         // URL at end of text
         let text = "Visit https://example.com";
         let urls = extract_urls(text);
         assert_eq!(urls.len(), 1);
         assert_eq!(urls[0], "https://example.com");
-        
+
         // URL is entire text
         let text = "https://example.com";
         let urls = extract_urls(text);
         assert_eq!(urls.len(), 1);
         assert_eq!(urls[0], "https://example.com");
-        
+
         // Multiple URLs separated by punctuation
         let text = "https://example.com,https://test.com;https://final.com";
         let urls = extract_urls(text);
@@ -338,3 +338,4 @@ mod tests {
     // Note: We don't test open_url function here since it's system-dependent
     // and would require mocking the process execution
 }
+

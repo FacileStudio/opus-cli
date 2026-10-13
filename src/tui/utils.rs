@@ -64,25 +64,25 @@ pub fn fuzzy_match(haystack: &str, needle: &str) -> bool {
     if needle.is_empty() {
         return true;
     }
-    
+
     let haystack_lower = haystack.to_lowercase();
     let needle_lower = needle.to_lowercase();
-    
+
     let mut needle_chars = needle_lower.chars();
     let mut current_char = needle_chars.next();
-    
+
     for h_char in haystack_lower.chars() {
         if let Some(n_char) = current_char {
             if h_char == n_char {
                 current_char = needle_chars.next();
                 if current_char.is_none() {
-                    return true; // All needle characters found
+                    return true;
                 }
             }
         }
     }
-    
-    current_char.is_none() // True if all characters were matched
+
+    current_char.is_none()
 }
 
 /// Calculate a simple fuzzy match score (0.0 to 1.0, higher is better)
@@ -93,31 +93,31 @@ pub fn fuzzy_match_score(haystack: &str, needle: &str) -> f32 {
     if haystack.is_empty() {
         return 0.0;
     }
-    
+
     let haystack_lower = haystack.to_lowercase();
     let needle_lower = needle.to_lowercase();
-    
+
     // Exact match gets highest score
     if haystack_lower == needle_lower {
         return 1.0;
     }
-    
+
     // Prefix match gets high score
     if haystack_lower.starts_with(&needle_lower) {
         return 0.9;
     }
-    
+
     // Contains match gets medium score
     if haystack_lower.contains(&needle_lower) {
         return 0.8;
     }
-    
+
     // Fuzzy match gets lower score based on how many characters match
     if fuzzy_match(haystack, needle) {
         let match_ratio = needle.len() as f32 / haystack.len() as f32;
         return 0.5 * match_ratio;
     }
-    
+
     0.0
 }
 
@@ -160,18 +160,19 @@ mod tests {
     fn test_fuzzy_match_score() {
         // Exact match should score 1.0
         assert_eq!(fuzzy_match_score("hello", "hello"), 1.0);
-        
+
         // Prefix match should score 0.9
         assert_eq!(fuzzy_match_score("hello world", "hello"), 0.9);
-        
+
         // Contains match should score 0.8
         assert_eq!(fuzzy_match_score("hello world", "world"), 0.8);
-        
+
         // Fuzzy match should score between 0 and 0.5
         let score = fuzzy_match_score("hello world", "hw");
         assert!(score > 0.0 && score <= 0.5);
-        
+
         // No match should score 0.0
         assert_eq!(fuzzy_match_score("hello", "xyz"), 0.0);
     }
 }
+

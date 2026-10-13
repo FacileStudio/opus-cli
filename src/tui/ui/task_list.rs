@@ -26,7 +26,7 @@ fn format_date_relative(date: &Option<DateTime<Utc>>) -> (String, Color) {
             let local: DateTime<Local> = dt.with_timezone(&Local);
             let now = Local::now();
             let diff = local.signed_duration_since(now).num_days();
-            
+
             let formatted = if diff == 0 {
                 "Today".to_string()
             } else if diff == 1 {
@@ -39,17 +39,17 @@ fn format_date_relative(date: &Option<DateTime<Utc>>) -> (String, Color) {
                 // For all other cases (past beyond yesterday), show days ago
                 format!("{}d ago", -diff)
             };
-            
+
             let color = if diff < 0 {
-                Color::Red // Overdue
+                Color::Red
             } else if diff == 0 {
-                Color::Yellow // Due today
+                Color::Yellow
             } else if diff <= 3 {
-                Color::Cyan // Due soon
+                Color::Cyan
             } else {
-                Color::White // Normal
+                Color::White
             };
-            
+
             (formatted, color)
         }
         None => ("-".to_string(), Color::DarkGray),
@@ -58,8 +58,8 @@ fn format_date_relative(date: &Option<DateTime<Utc>>) -> (String, Color) {
 
 // Helper function to calculate optimal column widths
 fn calculate_column_widths(
-    columns: &[&TableColumn], 
-    _tasks: &[crate::opus::models::Task], 
+    columns: &[&TableColumn],
+    _tasks: &[crate::opus::models::Task],
     _app: &App,
     available_width: u16
 ) -> Vec<u16> {
@@ -72,7 +72,7 @@ fn calculate_column_widths(
         let min_width = column.min_width.unwrap_or(8);
         total_min_width += min_width;
         widths.push(min_width);
-        
+
         if column.max_width.is_none() {
             flexible_columns += 1;
         }
@@ -82,7 +82,7 @@ fn calculate_column_widths(
     if available_width > total_min_width && flexible_columns > 0 {
         let extra_space = available_width - total_min_width;
         let space_per_flexible = extra_space / flexible_columns;
-        
+
         for (i, column) in columns.iter().enumerate() {
             if column.max_width.is_none() {
                 widths[i] += space_per_flexible;
@@ -114,19 +114,19 @@ fn wrap_text_for_cell(text: &str, width: u16, should_wrap: bool) -> String {
 
     let width = width as usize;
     let mut result = String::new();
-    
+
     for (i, line) in text.lines().enumerate() {
         if i > 0 {
             result.push('\n');
         }
-        
+
         if line.len() <= width {
             result.push_str(line);
         } else {
             // Simple word wrapping
             let mut current_line = String::new();
             let mut first_word_in_line = true;
-            
+
             for word in line.split_whitespace() {
                 if current_line.is_empty() {
                     current_line = word.to_string();
@@ -148,21 +148,21 @@ fn wrap_text_for_cell(text: &str, width: u16, should_wrap: bool) -> String {
             }
         }
     }
-    
+
     result
 }
 
 // Enhanced cell creation that supports wrapping
 fn create_wrapped_cell_for_column<'a>(
-    task: &'a crate::opus::models::Task, 
-    column: &TableColumn, 
+    task: &'a crate::opus::models::Task,
+    column: &TableColumn,
     app: &'a App,
     width: u16
 ) -> Cell<'a> {
     // Debug which column is being rendered
-    
+
     let should_wrap = column.wrap_text.unwrap_or(false);
-    
+
     match &column.column_type {
         TaskColumn::Title => {
             use ratatui::text::{Span, Line};
@@ -185,17 +185,17 @@ fn create_wrapped_cell_for_column<'a>(
             }
             // Add hierarchy indicators with proper indentation
             let (indent_level, hierarchy_prefix) = app.get_task_hierarchy_info(task);
-            
+
             // Add indentation spaces
             if indent_level > 0 {
-                spans.push(Span::raw(" ".repeat(indent_level))); // 1 space per level
+                spans.push(Span::raw(" ".repeat(indent_level)));
             }
-            
+
             // Add hierarchy prefix if present
             if !hierarchy_prefix.is_empty() {
                 spans.push(Span::styled(hierarchy_prefix, Style::default().fg(Color::Gray)));
             }
-            
+
             spans.push(Span::raw(&task.title));
             let line = Line::from(spans);
             let mut cell = Cell::from(line);
@@ -215,13 +215,13 @@ fn create_wrapped_cell_for_column<'a>(
             let project_color = app.project_colors.get(&task.project_id)
                 .and_then(|hex| Some(hex_to_color(hex.as_str())))
                 .unwrap_or(Color::White);
-            
+
             let truncated = if project_name.len() > width as usize {
                 format!("{}…", &project_name[..width.saturating_sub(1) as usize])
             } else {
                 project_name
             };
-            
+
             Cell::from(truncated).style(Style::default().fg(project_color))
         }
         TaskColumn::Labels => {
@@ -284,7 +284,7 @@ fn create_wrapped_cell_for_column<'a>(
                         .join(", ")
                 })
                 .unwrap_or_else(|| "-".to_string());
-                
+
             if should_wrap {
                 let wrapped = wrap_text_for_cell(&assignees, width, true);
                 Cell::from(wrapped)
@@ -395,17 +395,17 @@ fn create_selected_cell_for_column<'a>(
 
 pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
     let columns = app.get_current_layout_columns();
-    
+
     let enabled_columns: Vec<&TableColumn> = columns.iter().filter(|c| c.enabled).collect();
-    
+
     // Check if Priority column is enabled
     let _has_priority_column = enabled_columns.iter().any(|c| matches!(c.column_type, TaskColumn::Priority));
     // ...existing code...
-    
+
     // Calculate optimal column widths
-    let available_width = area.width.saturating_sub(enabled_columns.len() as u16 + 1); // Account for borders
+    let available_width = area.width.saturating_sub(enabled_columns.len() as u16 + 1);
     let column_widths = calculate_column_widths(&enabled_columns, &app.tasks, app, available_width);
-    
+
     let header_cells: Vec<Cell> = enabled_columns.iter()
         .map(|col| Cell::from(col.name.as_str()).style(Style::default().fg(Color::Cyan)))
         .collect();
@@ -422,12 +422,12 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
     let visible_rows = if total_height > 4 { total_height - 4 } else { 1 };
     let num_tasks = app.tasks.len();
     let selected = app.selected_task_index;
-    
+
     // Debug task priorities
     // ...existing code...
 
     // Add a buffer at the bottom to always show the last N tasks when near the end
-    let bottom_buffer = 3; // Number of tasks at the bottom to always keep visible
+    let bottom_buffer = 3;
     let mut start = 0;
     let mut end = num_tasks;
     if num_tasks > visible_rows {
@@ -473,9 +473,9 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
                     }
                 })
                 .collect();
-            
+
             let mut row = Row::new(cells);
-            
+
             // Handle flashing effect
             let mut flash_bg = None;
             if let (Some(flash_id), Some(start_time)) = (app.flash_task_id.clone(), app.flash_start) {
@@ -503,7 +503,7 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
                     }
                 }
             }
-            
+
             // Apply selection, flash, and alternating row styling
             if is_selected {
                 if let Some(bg) = flash_bg {
@@ -523,10 +523,10 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
             }
             row
         });
-    
+
     // Build comprehensive title with filter and project information
     let mut title = format!("Tasks ({})", app.get_filter_display_name());
-    
+
     // Add project information if a specific project is selected
     if app.current_project_id.is_some() {
         let project_name = app.get_current_project_name();
@@ -537,10 +537,11 @@ pub fn draw_tasks_table(f: &mut Frame, app: &App, area: Rect) {
         let active_project = app.get_active_default_project();
         title = format!("Tasks ({}) - Default Project: {}", app.get_filter_display_name(), active_project);
     }
-    
+
     let table = Table::new(rows, constraints)
         .header(header)
         .block(Block::default().title(title));
-    
+
     f.render_widget(table, area);
 }
+

@@ -88,7 +88,7 @@ impl AttachmentModal {
             .style(Style::default().fg(Color::Gray));
 
         let mut help_lines = Vec::new();
-        
+
         // Show operation status if in progress
         if self.operation_in_progress {
             help_lines.push(Line::from(vec![
@@ -97,7 +97,7 @@ impl AttachmentModal {
             ]));
             help_lines.push(Line::raw(""));
         }
-        
+
         if !self.viewer.attachments.is_empty() {
             help_lines.push(Line::from(vec![
                 Span::styled("↑/↓ ", Style::default().fg(Color::Yellow)),
@@ -110,7 +110,7 @@ impl AttachmentModal {
                 Span::styled("Remove", Style::default().fg(Color::Gray)),
             ]));
         }
-        
+
         help_lines.push(Line::from(vec![
             Span::styled("u ", Style::default().fg(Color::Yellow)),
             Span::styled("Upload new file", Style::default().fg(Color::Gray)),
@@ -157,7 +157,7 @@ impl AttachmentModal {
                 }
             }
             'u' | 'U' => AttachmentModalAction::Upload,
-            'q' | 'Q' | '\x1b' => AttachmentModalAction::Close, // ESC key
+            'q' | 'Q' | '\x1b' => AttachmentModalAction::Close,
             _ => AttachmentModalAction::None,
         }
     }
@@ -172,4 +172,3 @@ pub enum AttachmentModalAction {
     Remove(Attachment),
     Upload,
 }
- 

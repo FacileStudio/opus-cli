@@ -25,15 +25,15 @@ fn priority_to_num(p: &Priority) -> i32 {
 
 #[derive(Debug, Clone)]
 pub enum SubtaskOperation {
-    MakeSubtask, // Make selected task a subtask of another task
-    AddSubtask,  // Add a new subtask to the selected task
+    MakeSubtask,
+    AddSubtask,
 }
 
 pub struct App {
     pub config: OpusConfig,
     pub running: bool,
     pub tasks: Vec<Task>,
-    pub all_tasks: Vec<Task>, // Store all tasks for local filtering
+    pub all_tasks: Vec<Task>,
     pub detailed_task_cache: HashMap<String, Task>,
     pub project_map: HashMap<String, String>,
     pub project_colors: HashMap<String, String>,
@@ -87,7 +87,7 @@ pub struct App {
     pub filter_descriptions: std::collections::HashMap<String, String>,
     pub current_filter_id: Option<String>,
     // Active project override from filter
-    pub active_project_override: Option<String>, // Project name override from current filter
+    pub active_project_override: Option<String>,
     // Flash feedback state
     pub refreshing: bool,
     pub flash_task_id: Option<String>,
@@ -129,18 +129,18 @@ pub struct App {
     // Attachment modal state
     pub show_attachment_modal: bool,
     pub attachment_modal: Option<crate::tui::modals::AttachmentModal>,
-    
+
     // File picker modal state
     pub show_file_picker_modal: bool,
     pub file_picker_modal: Option<crate::tui::modals::FilePickerModal>,
-    
+
     // URL modal state
     pub show_url_modal: bool,
     pub url_modal: Option<crate::tui::modals::UrlModal>,
     // Comments modal state
     pub show_comments_modal: bool,
     pub comments_modal: Option<crate::tui::modals::CommentsModal>,
-    
+
     // Layout system
     pub current_layout_name: String,
     pub layout_notification: Option<String>,
@@ -206,7 +206,7 @@ impl App {
         let initial_workspace_id = config.workspace_id.clone().unwrap_or_default();
         Self {
             config,
-            running: true, 
+            running: true,
             tasks: Vec::new(),
             all_tasks: Vec::new(),
             detailed_task_cache: HashMap::new(),
@@ -256,7 +256,7 @@ impl App {
             flash_task_id: None,
             flash_start: None,
             flash_cycle_count: 0,
-            flash_cycle_max: 6, // 3 full on/off cycles (6 states)
+            flash_cycle_max: 6,
             suggestions: Vec::new(),
             selected_suggestion: 0,
             suggestion_mode: None,
@@ -318,7 +318,7 @@ impl App {
             available_workspaces: Vec::new(),
             last_key_time: None,
             consecutive_q_count: 0,
-            // Relation modals - DISABLED: Incomplete feature  
+            // Relation modals - DISABLED: Incomplete feature
             // show_relations_modal: false,
             // show_add_relation_modal: false,
             // add_relation_input: String::new(),
@@ -337,17 +337,17 @@ impl App {
     /// Handle consecutive 'q' presses for double-q quit
     pub fn handle_q_press(&mut self) {
         let now = chrono::Local::now();
-        
+
         // If it's been more than 1 second since last 'q', reset the counter
         if let Some(last_time) = self.last_key_time {
             if now.signed_duration_since(last_time).num_seconds() > 1 {
                 self.consecutive_q_count = 0;
             }
         }
-        
+
         self.consecutive_q_count += 1;
         self.last_key_time = Some(now);
-        
+
         if self.consecutive_q_count >= 2 {
             // Double q pressed within 1 second - quit immediately
             self.quit();
@@ -356,7 +356,7 @@ impl App {
             self.confirm_quit();
         }
     }
-    
+
     /// Reset the consecutive 'q' counter when other keys are pressed
     pub fn reset_q_counter(&mut self) {
         self.consecutive_q_count = 0;
@@ -374,11 +374,11 @@ impl App {
         self.detailed_task_cache.insert(task.id.clone(), task);
     }
     pub fn toggle_info_pane(&mut self) { self.show_info_pane = !self.show_info_pane; }
-    pub fn show_quick_add_modal(&mut self) { 
+    pub fn show_quick_add_modal(&mut self) {
         self.close_all_modals();
-        self.show_quick_add_modal = true; 
-        self.quick_add_input.clear(); 
-        self.quick_add_cursor_position = 0; 
+        self.show_quick_add_modal = true;
+        self.quick_add_input.clear();
+        self.quick_add_cursor_position = 0;
     }
     pub fn hide_quick_add_modal(&mut self) { self.show_quick_add_modal = false; self.quick_add_input.clear(); self.quick_add_cursor_position = 0; }
     pub fn add_char_to_quick_add(&mut self, c: char) { self.quick_add_input.insert(self.quick_add_cursor_position, c); self.quick_add_cursor_position += 1; }
@@ -417,7 +417,7 @@ impl App {
         }
     }
     pub fn hide_edit_modal(&mut self) { self.show_edit_modal = false; self.edit_input.clear(); self.edit_cursor_position = 0; self.editing_task_id = None; }
-    
+
     pub fn show_form_edit_modal(&mut self) {
         if let Some(task) = self.get_selected_task() {
             let form_state = FormEditState::new(task);
@@ -426,12 +426,12 @@ impl App {
             self.form_edit_state = Some(form_state);
         }
     }
-    
+
     pub fn hide_form_edit_modal(&mut self) {
         self.show_form_edit_modal = false;
         self.form_edit_state = None;
     }
-    
+
     pub fn add_char_to_edit(&mut self, c: char) { self.edit_input.insert(self.edit_cursor_position, c); self.edit_cursor_position += 1; }
     pub fn delete_char_from_edit(&mut self) { if self.edit_cursor_position > 0 { self.edit_cursor_position -= 1; self.edit_input.remove(self.edit_cursor_position); } }
     pub fn move_edit_cursor_left(&mut self) { if self.edit_cursor_position > 0 { self.edit_cursor_position -= 1; } }
@@ -488,29 +488,29 @@ impl App {
     pub fn update_suggestions(&mut self, input: &str, cursor: usize) {
         // Find the last * or + before the cursor
         let before_cursor = &input[..cursor];
-        
+
         // Helper function to check if we're still in a suggestion context
         // We stop suggestions when we encounter certain delimiters or control characters
         fn is_suggestion_char(c: char) -> bool {
             !matches!(c, '\n' | '\r' | '\t' | '#' | '@' | '!' | '&' | '|' | '(' | ')' | '{' | '}' | '"' | '\'')
         }
-        
+
         if let Some(pos) = before_cursor.rfind('*') {
             let after = &before_cursor[pos+1..];
             // Special handling for square brackets - if we're inside [], continue until ]
             let suggestion_text = if after.starts_with('[') {
-                &after[1..] // Skip the opening bracket
+                &after[1..]
             } else {
                 after
             };
-            
+
             // Allow spaces and more characters in label suggestions, but stop at certain delimiters
             if suggestion_text.chars().all(is_suggestion_char) {
                 self.suggestion_mode = Some(SuggestionMode::Label);
                 self.suggestion_prefix = suggestion_text.to_string();
                 let prefix = suggestion_text.trim();
                 let labels: Vec<_> = self.label_map.values().cloned().collect();
-                
+
                 // Use fuzzy matching with scoring for better results
                 let mut scored_labels: Vec<(String, f32)> = labels.into_iter()
                     .map(|label| {
@@ -519,17 +519,17 @@ impl App {
                     })
                     .filter(|(_, score)| *score > 0.0)
                     .collect();
-                
+
                 // Sort by score (highest first), then alphabetically
                 scored_labels.sort_by(|a, b| {
                     b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
                         .then_with(|| a.0.cmp(&b.0))
                 });
-                
+
                 let filtered: Vec<String> = scored_labels.into_iter()
                     .map(|(label, _)| label)
                     .collect();
-                
+
                 if filtered != self.suggestions {
                     self.selected_suggestion = 0;
                 } else if self.selected_suggestion >= filtered.len() {
@@ -539,16 +539,16 @@ impl App {
                 return;
             }
         }
-        
+
         if let Some(pos) = before_cursor.rfind('+') {
             let after = &before_cursor[pos+1..];
             // Special handling for square brackets - if we're inside [], continue until ]
             let suggestion_text = if after.starts_with('[') {
-                &after[1..] // Skip the opening bracket
+                &after[1..]
             } else {
                 after
             };
-            
+
             // Allow spaces and more characters in project suggestions, but stop at certain delimiters
             if suggestion_text.chars().all(is_suggestion_char) {
                 self.suggestion_mode = Some(SuggestionMode::Project);
@@ -558,7 +558,7 @@ impl App {
                 let projects: Vec<_> = self.project_map.values()
                     .cloned()
                     .collect();
-                
+
                 // Use fuzzy matching with scoring for better results
                 let mut scored_projects: Vec<(String, f32)> = projects.into_iter()
                     .map(|project| {
@@ -567,17 +567,17 @@ impl App {
                     })
                     .filter(|(_, score)| *score > 0.0)
                     .collect();
-                
+
                 // Sort by score (highest first), then alphabetically
                 scored_projects.sort_by(|a, b| {
                     b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
                         .then_with(|| a.0.cmp(&b.0))
                 });
-                
+
                 let filtered: Vec<String> = scored_projects.into_iter()
                     .map(|(project, _)| project)
                     .collect();
-                
+
                 if filtered != self.suggestions {
                     self.selected_suggestion = 0;
                 } else if self.selected_suggestion >= filtered.len() {
@@ -587,7 +587,7 @@ impl App {
                 return;
             }
         }
-        
+
         self.suggestion_mode = None;
         self.suggestions.clear();
         self.selected_suggestion = 0;
@@ -642,16 +642,16 @@ impl App {
         self.close_all_modals();
         self.show_help_modal = true;
     }
-    
+
     pub fn hide_help_modal(&mut self) {
         self.show_help_modal = false;
     }
-    
+
     pub fn show_sort_modal(&mut self) {
         self.close_all_modals();
         self.show_sort_modal = true;
     }
-    
+
     pub fn hide_sort_modal(&mut self) {
         self.show_sort_modal = false;
     }
@@ -815,11 +815,6 @@ impl App {
         self.add_subtask_input.clear();
         self.add_subtask_cursor_position = 0;
         // Relations modals - DISABLED: Incomplete feature
-        // self.show_relations_modal = false;
-        // self.show_add_relation_modal = false;
-        // self.add_relation_input.clear();
-        // self.add_relation_cursor_position = 0;
-        // self.relations_task_id = None;
     }
 
     // Column layout methods
@@ -836,7 +831,7 @@ impl App {
         self.show_layout_notification(message);
         // Debug message to see what's happening
         self.add_debug_message(format!("Layout switch: {} -> {} (total: {})", old_layout, layout_name, layouts.len()));
-        
+
         // Apply layout-specific sort if defined
         self.apply_layout_sort();
     }
@@ -854,7 +849,7 @@ impl App {
         self.show_layout_notification(message);
         // Debug message to see what's happening
         self.add_debug_message(format!("Layout switch: {} -> {} (total: {})", old_layout, layout_name, layouts.len()));
-        
+
         // Apply layout-specific sort if defined
         self.apply_layout_sort();
     }
@@ -867,10 +862,10 @@ impl App {
                 .iter()
                 .filter_map(|col| col.sort.as_ref().map(|sort| (col, sort)))
                 .collect();
-            
+
             // Sort by order (primary sort = 1, secondary = 2, etc.)
             sort_columns.sort_by_key(|(_, sort)| sort.order);
-            
+
             if !sort_columns.is_empty() {
                 self.add_debug_message(format!("Applying layout sort with {} levels", sort_columns.len()));
                 self.apply_multi_level_sort(&sort_columns);
@@ -883,7 +878,7 @@ impl App {
     /// Apply multi-level sorting based on column configuration
     fn apply_multi_level_sort(&mut self, sort_columns: &[(&crate::config::TableColumn, &crate::config::ColumnSort)]) {
         use crate::config::{TaskColumn, SortDirection};
-        
+
         self.tasks.sort_by(|a, b| {
             for (column, sort_config) in sort_columns {
                 let ordering = match column.column_type {
@@ -925,15 +920,15 @@ impl App {
                         // None (no due date) should always sort last
                         let cmp = match (&a.due_date, &b.due_date) {
                             (None, None) => std::cmp::Ordering::Equal,
-                            (None, Some(_)) => std::cmp::Ordering::Greater, // None always last
-                            (Some(_), None) => std::cmp::Ordering::Less,    // None always last
+                            (None, Some(_)) => std::cmp::Ordering::Greater,
+                            (Some(_), None) => std::cmp::Ordering::Less,
                             (Some(a_due), Some(b_due)) => a_due.cmp(b_due),
                         };
                         match sort_config.direction {
                             SortDirection::Asc => cmp,
                             SortDirection::Desc => match cmp {
-                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater, // Keep None last
-                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,       // Keep None last
+                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,
                                 std::cmp::Ordering::Equal => std::cmp::Ordering::Equal,
                             },
                         }
@@ -942,15 +937,15 @@ impl App {
                         // None (no start date) should always sort last
                         let cmp = match (&a.start_date, &b.start_date) {
                             (None, None) => std::cmp::Ordering::Equal,
-                            (None, Some(_)) => std::cmp::Ordering::Greater, // None always last
-                            (Some(_), None) => std::cmp::Ordering::Less,    // None always last
+                            (None, Some(_)) => std::cmp::Ordering::Greater,
+                            (Some(_), None) => std::cmp::Ordering::Less,
                             (Some(a_start), Some(b_start)) => a_start.cmp(b_start),
                         };
                         match sort_config.direction {
                             SortDirection::Asc => cmp,
                             SortDirection::Desc => match cmp {
-                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater, // Keep None last
-                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,       // Keep None last
+                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,
                                 std::cmp::Ordering::Equal => std::cmp::Ordering::Equal,
                             },
                         }
@@ -959,15 +954,15 @@ impl App {
                         // Task.created is Option<String>, need to handle comparison
                         let cmp = match (&a.created, &b.created) {
                             (None, None) => std::cmp::Ordering::Equal,
-                            (None, Some(_)) => std::cmp::Ordering::Greater, // None always last
-                            (Some(_), None) => std::cmp::Ordering::Less,    // None always last
+                            (None, Some(_)) => std::cmp::Ordering::Greater,
+                            (Some(_), None) => std::cmp::Ordering::Less,
                             (Some(a_created), Some(b_created)) => a_created.cmp(b_created),
                         };
                         match sort_config.direction {
                             SortDirection::Asc => cmp,
                             SortDirection::Desc => match cmp {
-                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater, // Keep None last
-                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,       // Keep None last
+                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,
                                 std::cmp::Ordering::Equal => std::cmp::Ordering::Equal,
                             },
                         }
@@ -976,15 +971,15 @@ impl App {
                         // Task.updated is Option<String>, need to handle comparison
                         let cmp = match (&a.updated, &b.updated) {
                             (None, None) => std::cmp::Ordering::Equal,
-                            (None, Some(_)) => std::cmp::Ordering::Greater, // None always last
-                            (Some(_), None) => std::cmp::Ordering::Less,    // None always last
+                            (None, Some(_)) => std::cmp::Ordering::Greater,
+                            (Some(_), None) => std::cmp::Ordering::Less,
                             (Some(a_updated), Some(b_updated)) => a_updated.cmp(b_updated),
                         };
                         match sort_config.direction {
                             SortDirection::Asc => cmp,
                             SortDirection::Desc => match cmp {
-                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater, // Keep None last
-                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,       // Keep None last
+                                std::cmp::Ordering::Greater => std::cmp::Ordering::Greater,
+                                std::cmp::Ordering::Less => std::cmp::Ordering::Less,
                                 std::cmp::Ordering::Equal => std::cmp::Ordering::Equal,
                             },
                         }
@@ -996,7 +991,7 @@ impl App {
                             SortDirection::Desc => cmp.reverse(),
                         }
                     }
-                    // For columns that don't have meaningful sort (Labels, Assignees), 
+                    // For columns that don't have meaningful sort (Labels, Assignees),
                     // fall back to title sort
                     _ => {
                         let cmp = normalize_string(&a.title).cmp(&normalize_string(&b.title));
@@ -1006,14 +1001,14 @@ impl App {
                         }
                     }
                 };
-                
+
                 // If this level produces a non-equal result, use it
                 if ordering != std::cmp::Ordering::Equal {
                     return ordering;
                 }
                 // Otherwise, continue to the next sort level
             }
-            
+
             // If all sort levels are equal, maintain stable sort
             std::cmp::Ordering::Equal
         });
@@ -1141,7 +1136,7 @@ impl App {
             },
             _ => Err(format!("Unknown quick action: {}", action.action)),
         };
-        
+
         // If the quick action was successful, also update the corresponding task in all_tasks
         if result.is_ok() {
             if let Some(all_task) = self.all_tasks.iter_mut().find(|t| t.id == task_id) {
@@ -1154,7 +1149,7 @@ impl App {
                 }
             }
         }
-        
+
         result
     }
 
@@ -1194,7 +1189,7 @@ impl App {
             self.tasks[idx].title = self.edit_input.clone();
         }
     }
-    
+
     pub fn set_filters_with_descriptions(&mut self, filters: Vec<(String, String)>, descriptions: std::collections::HashMap<String, String>) {
         self.filters = filters;
         self.filter_descriptions = descriptions;
@@ -1318,11 +1313,11 @@ impl App {
                     }
                 })
                 .collect();
-            
+
             scored_tasks.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
             self.filtered_subtask_tasks = scored_tasks.into_iter().map(|(id, title, _)| (id, title)).collect();
         }
-        
+
         // Reset selection to first item
         self.selected_subtask_picker_index = 0;
     }
@@ -1356,15 +1351,15 @@ impl App {
                 let has_active_parent = related_tasks["subtask"]
                     .iter()
                     .any(|parent_task| !parent_task.done);
-                
+
                 if has_active_parent {
-                    return Some("  └─"); // Subtask indicator with indentation
+                    return Some("  └─");
                 }
                 // If all parent tasks are done, don't show subtask indicator
             }
             // Check if this task has subtasks
             if related_tasks.contains_key("parenttask") && !related_tasks["parenttask"].is_empty() {
-                return Some("├─"); // Parent task indicator
+                return Some("├─");
             }
         }
         None
@@ -1432,18 +1427,18 @@ impl App {
                 let has_active_parent = related_tasks["parenttask"]
                     .iter()
                     .any(|parent_task| !parent_task.done);
-                
+
                 if has_active_parent {
-                    return (1, "└─ "); // Level 1 indentation with subtask indicator
+                    return (1, "└─ ");
                 }
                 // If all parent tasks are done, don't show subtask indicator
             }
             // Check if this task has subtasks (has subtask relations)
             if related_tasks.contains_key("subtask") && !related_tasks["subtask"].is_empty() {
-                return (0, ""); // No indentation, no prefix for parent tasks
+                return (0, "");
             }
         }
-        (0, "") // No hierarchy indicator
+        (0, "")
     }
 
     /// Check if a task is a subtask of another task
@@ -1489,5 +1484,5 @@ impl App {
     // pub fn get_task_relation_indicator(&self, _task: &crate::opus::models::Task) -> Option<RelationKind> {
     //     // Return a valid variant for testing, e.g. Precedes
     //     Some(RelationKind::Precedes)
-    // }
 }
+

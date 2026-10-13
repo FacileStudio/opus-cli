@@ -23,5 +23,5 @@ pub use attachments::{AttachmentModal, AttachmentModalAction};
 pub use file_picker::{FilePickerModal, FilePickerAction};
 pub use comments::{CommentsModal, CommentsModalAction};
 pub use url_modal::{UrlModal, UrlModalAction};
-// Relations - DISABLED: Incomplete feature  
+// Relations - DISABLED: Incomplete feature
 // pub use relations::{handle_relations_modal, handle_add_relation_modal};

@@ -144,20 +144,20 @@ async fn refresh_task_relations(
 
 fn find_task_by_title(app: &App, title: &str) -> Option<i64> {
     let title_lower = title.to_lowercase();
-    
+
     // First try exact match
     for task in &app.all_tasks {
         if task.title.to_lowercase() == title_lower {
             return Some(task.id);
         }
     }
-    
+
     // Then try partial match
     for task in &app.all_tasks {
         if task.title.to_lowercase().contains(&title_lower) {
             return Some(task.id);
         }
     }
-    
+
     None
 }
