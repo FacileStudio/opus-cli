@@ -7,9 +7,8 @@ pub mod projects;
 pub mod filters;
 pub mod users;
 pub mod labels;
-pub mod attachments;
 pub mod relations;
-pub mod keys;
+pub mod tokens;
 
 pub struct OpusClient {
     client: Client,

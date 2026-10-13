@@ -40,7 +40,7 @@ pub struct OpusTaskCreate {
     pub column_id: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpusTaskUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -48,13 +48,15 @@ pub struct OpusTaskUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub due_date: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub start_date: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub column_id: Option<String>,
+    pub user_id: Option<String>,
 }
 
 impl super::OpusClient {
@@ -145,7 +147,7 @@ impl super::OpusClient {
 
         for username in &parsed.assignees {
             if let Some(user) = self.find_user_by_name(username).await {
-                let _ = self.update_task_assignee(&created_task.id, &user.id).await;
+                let _ = self.assign_task(&created_task.id, &user.id).await;
             }
         }
 
@@ -244,14 +246,19 @@ impl super::OpusClient {
                 .description
                 .clone()
                 .or_else(|| current.description.clone()),
-            "status": current.status.clone(),
+            "status": update
+                .status
+                .clone()
+                .unwrap_or_else(|| current.status.clone()),
             "priority": update
                 .priority
                 .clone()
                 .unwrap_or_else(|| current.priority.to_string()),
+            "projectId": current.project_id,
+            "position": current.position,
             "dueDate": update.due_date.or(current.due_date),
             "startDate": update.start_date.or(current.start_date),
-            "position": current.position,
+            "userId": update.user_id.clone().or(current.user_id),
         });
 
         let json_str = serde_json::to_string(&payload).unwrap_or_default();
@@ -303,156 +310,28 @@ impl super::OpusClient {
         }
     }
 
-    pub async fn update_task_status(
-        &self,
-        task_id: &str,
-        status: &str,
-    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/status/{}", self.base_url, task_id);
-        let payload = serde_json::json!({ "status": status });
-        let response = self
-            .client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(&payload)
-            .send()
-            .await?;
-
-        let resp_status = response.status();
-        if resp_status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!(
-                "Failed to update task status: {} - {}",
-                resp_status, error_text
-            )
-            .into())
-        }
-    }
-
     pub async fn set_task_status(
         &self,
         task_id: &str,
         status: &str,
     ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/status/{}", self.base_url, task_id);
-        let payload = serde_json::json!({ "status": status });
-        let response = self
-            .client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(&payload)
-            .send()
-            .await?;
-
-        let resp_status = response.status();
-        if resp_status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!(
-                "Failed to set task status: {} - {}",
-                resp_status, error_text
-            )
-            .into())
-        }
+        let update = OpusTaskUpdate {
+            status: Some(status.to_string()),
+            ..OpusTaskUpdate::default()
+        };
+        self.update_task(task_id, &update).await
     }
 
-    pub async fn update_task_priority(
-        &self,
-        task_id: &str,
-        priority: &str,
-    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/priority/{}", self.base_url, task_id);
-        let payload = serde_json::json!({ "priority": priority });
-        let response = self
-            .client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(&payload)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to update priority: {} - {}", status, error_text).into())
-        }
-    }
-
-    pub async fn update_task_assignee(
+    pub async fn assign_task(
         &self,
         task_id: &str,
         user_id: &str,
     ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/actor/{}", self.base_url, task_id);
-        let payload = serde_json::json!({ "userId": user_id });
-        let response = self
-            .client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(&payload)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to update assignee: {} - {}", status, error_text).into())
-        }
-    }
-
-    pub async fn update_task_due_date(
-        &self,
-        task_id: &str,
-        due_date: &str,
-    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/due-date/{}", self.base_url, task_id);
-        let payload = serde_json::json!({ "dueDate": due_date });
-        let response = self
-            .client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(&payload)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to update due date: {} - {}", status, error_text).into())
-        }
-    }
-
-    pub async fn update_task_title(
-        &self,
-        task_id: &str,
-        title: &str,
-    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let url = format!("{}/api/task/title/{}", self.base_url, task_id);
-        let payload = serde_json::json!({ "title": title });
-        let response = self
-            .client
-            .put(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .json(&payload)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to update title: {} - {}", status, error_text).into())
-        }
+        let update = OpusTaskUpdate {
+            user_id: Some(user_id.to_string()),
+            ..OpusTaskUpdate::default()
+        };
+        self.update_task(task_id, &update).await
     }
 
     pub async fn toggle_task_status(
@@ -472,7 +351,7 @@ impl super::OpusClient {
         };
 
         match target_column {
-            Some(col) => self.update_task_status(task_id, &col.slug).await,
+            Some(col) => self.set_task_status(task_id, &col.slug).await,
             None => Err("No suitable column found for status toggle".into()),
         }
     }
@@ -712,10 +591,11 @@ impl super::OpusClient {
         let update = OpusTaskUpdate {
             title: Some(parsed.title.clone()),
             description: None,
+            status: None,
             priority: parsed.priority.clone(),
             due_date: parsed.due_date,
             start_date: parsed.start_date,
-            column_id: None,
+            user_id: None,
         };
 
         let updated_task = self.update_task(task_id, &update).await?;
@@ -736,7 +616,7 @@ impl super::OpusClient {
 
         for username in &parsed.assignees {
             if let Some(user) = self.find_user_by_name(username).await {
-                let _ = self.update_task_assignee(&updated_task.id, &user.id).await;
+                let _ = self.assign_task(&updated_task.id, &user.id).await;
             }
         }
 
@@ -777,7 +657,8 @@ impl super::OpusClient {
                     .and_then(|nd| nd.and_hms_opt(0, 0, 0))
                     .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
             }),
-            column_id: None,
+            status: None,
+            user_id: None,
         };
 
         let _updated_task = self.update_task(task_id, &update).await?;
@@ -797,7 +678,7 @@ impl super::OpusClient {
         }
 
         for uid in assignee_ids {
-            let _ = self.update_task_assignee(task_id, uid).await;
+            let _ = self.assign_task(task_id, uid).await;
         }
 
         if let Some(content) = comment {

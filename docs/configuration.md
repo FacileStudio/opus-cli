@@ -12,7 +12,7 @@ writes to it, and it always writes to `~/.opus.yml` regardless of `--config`.
 
 ```yaml
 api_url: "https://opus.facile.studio"
-api_key: "your-api-key"
+api_key: "your-api-token"
 workspace_id: "your-workspace-id"
 default_project: "Inbox"
 default_filter: "Active"
@@ -20,8 +20,8 @@ default_filter: "Active"
 
 | Key | Required | Default | What it does |
 |---|---|---|---|
-| `api_url` | yes | `http://localhost:1337` | Instance root. A trailing `/api` and slashes are stripped |
-| `api_key` | yes | — | Bearer token. An empty or missing value exits 1 with a setup hint |
+| `api_url` | no | `http://localhost:1337` | Instance root. A trailing `/api` and slashes are stripped |
+| `api_key` | no | — | Bearer token. Required unless `OPUS_TOKEN` is set, or the file is missing and `--dev-env` is passed |
 | `workspace_id` | no | `""` | Sent as `workspaceId` on project, label and member queries |
 | `default_project` | no | `Inbox` | Project used when the task text has no `+project` |
 | `default_filter` | no | — | Name of a saved filter applied on TUI startup |
@@ -66,58 +66,73 @@ through a full task update.
 
 ## Environment variables
 
-Environment variables are read **only when `--dev-env` is passed**. Without that flag the
-config file is the sole source, and exporting `OPUS_API_URL` changes nothing. `dotenv` loads a
-`.env` from the working directory before clap runs, so a `.env` plus `--dev-env` works.
+Every variable below overrides the config file, so a shell profile, a CI secret or a `.env`
+loaded by `dotenv` from the working directory can carry the whole setup. A `--dev-env` run is
+simply one that is allowed to have no config file at all.
 
-| Variable | Default under `--dev-env` | What it does |
+| Variable | Replaces | Default with no config file |
 |---|---|---|
-| `OPUS_API_URL` | `http://localhost:1337` | Instance root |
-| `OPUS_API_KEY` | `demo-token` | Bearer token |
-| `OPUS_WORKSPACE_ID` | `""` | Workspace scope |
-| `OPUS_DEFAULT_PROJECT` | `Inbox` | Project for tasks without `+project` |
-| `OPUS_DEBUG` | unset | If set to anything, enables the debug log |
+| `OPUS_TOKEN` | `api_key` | `demo-token` under `--dev-env`, otherwise unset |
+| `OPUS_API_KEY` | `api_key`, if `OPUS_TOKEN` is unset | — |
+| `OPUS_KEY` | `api_key`, if both above are unset | — |
+| `OPUS_API_URL` | `api_url` | `http://localhost:1337` |
+| `OPUS_WORKSPACE_ID` | `workspace_id` | `""` |
+| `OPUS_DEFAULT_PROJECT` | `default_project` | `Inbox` |
+| `OPUS_DEBUG` | — | unset |
 
-`OPUS_DEBUG` is the exception: it is checked directly in `src/debug.rs` on every log call, so
-it works with or without `--dev-env`. When set, the binary truncates and then appends to
-`opus_debug.log` **in the current working directory**. Unset, `debug_log` returns immediately
-and nothing is written.
+The three credential names are checked in order and the first non-empty one wins, because a
+credential channel that answers to one spelling only fails in a way that reads as a bad token.
+`OPUS_TOKEN` is the documented name and the one the Developer settings page hands out.
 
-## Getting an API key
+`OPUS_DEBUG` is separate from precedence: it is checked in `src/debug.rs` on every log call.
+When set, the binary truncates and then appends to `opus_debug.log` **in the current working
+directory**. Unset, `debug_log` returns immediately and nothing is written.
 
-Generate it in the Opus dashboard under **Settings > Account > Developer**, then write it into
-`~/.opus.yml`. There is no `opus login`, no device flow and no OIDC path in the CLI.
+## Getting an API token
+
+Create one with the CLI:
+
+```sh
+opus token create --name laptop
+```
+
+Or in the Opus dashboard under **Settings > Account > Developer**, which lists the same tokens
+and prints the value once on creation. Either way the token is what `api_key` or `OPUS_TOKEN`
+should hold. There is no `opus login`, no device flow and no OIDC path in the CLI.
 
 ## Token storage
 
-The key is stored in plaintext YAML. The CLI does not use the OS keychain, does not encrypt
+The token is stored in plaintext YAML. The CLI does not use the OS keychain, does not encrypt
 the file, and does not restrict its mode. On a shared machine, do it yourself:
 
 ```sh
 chmod 600 ~/.opus.yml
 ```
 
-The TUI help modal (`?`) shows the key obfuscated as first four and last four characters.
+Better still, keep it out of the file: `export OPUS_TOKEN=...` from a secret store.
+
+The TUI help modal (`?`) shows the token obfuscated as first four and last four characters.
 
 ## Precedence
 
 For a single run, values resolve as:
 
-1. `--dev-env` set — `OPUS_*` variables with the defaults above, config file ignored entirely.
-2. Otherwise — `--config FILE` if given, else `~/.opus.yml`. A missing file or an empty
-   `api_key` exits 1.
-3. `-w` / `--workspace` overrides the workspace ID last, whichever source it came from, and
-   is not persisted.
+1. An explicit flag, where one exists — `--config`, `-w` / `--workspace`.
+2. The environment variable, `OPUS_TOKEN` / `OPUS_API_URL` / `OPUS_WORKSPACE_ID` /
+   `OPUS_DEFAULT_PROJECT`.
+3. The config file: `--config FILE` if given, else `~/.opus.yml`.
+4. The built-in default — `http://localhost:1337`, `Inbox`, an empty workspace ID.
+
+A missing config file is an error unless `--dev-env` is passed or a credential came from the
+environment. A blank `api_key` with nothing in the environment exits 1 with a setup hint.
+`-w` is applied last, whichever source the workspace ID came from, and is never persisted.
 
 ## Error messages you will actually see
 
 | Symptom | Cause |
 |---|---|
-| `No config found. Run \`opus\` to start setup, or create ~/.opus.yml` | No `~/.opus.yml`. Despite the wording, running `opus` does not open a wizard — write the file yourself |
-| `Config file not found at: <path>` | `--config` pointed at a missing file |
-| `No API key configured. Generate one from your Opus dashboard: Settings > Account > Developer` | `api_key` missing or blank |
-| `Failed to fetch workspaces: 401 - ...` | Wrong or revoked key |
+| `no config found — create ~/.opus.yml, or set OPUS_TOKEN` | No `~/.opus.yml`, no `--dev-env`, no credential in the environment |
+| `config file not found at <path>` | `--config` pointed at a missing file |
+| `no API token configured — create one with \`opus token create\`, set OPUS_TOKEN, or put api_key in ~/.opus.yml` | Nothing supplied a credential |
+| `GET /api/auth/api-tokens failed (401 Unauthorized)` | The token is wrong or has been revoked |
 | `default project '<name>' not found` | `default_project` does not exist in the workspace |
-
-A `first_run_wizard()` exists in `src/first_run.rs` but nothing calls it, which is why the
-"run `opus` to start setup" hint does not lead anywhere.

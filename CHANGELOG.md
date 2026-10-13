@@ -10,6 +10,37 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-13
+
+### Added
+
+- `opus token list`, `opus token create` and `opus token revoke` manage personal
+  API tokens against the Go backend's `/auth/api-tokens` routes. A token
+  authenticates on every route a login does, which is what a scripted job needs;
+  `create` prints the plaintext once and the server only ever stores a hash.
+- The credential and the settings resolve from the environment first: `OPUS_TOKEN`
+  (falling back to `OPUS_API_KEY`, then `OPUS_KEY`), `OPUS_API_URL`,
+  `OPUS_WORKSPACE_ID` and `OPUS_DEFAULT_PROJECT`. Precedence is flag > environment
+  > config file > default, so exporting `OPUS_TOKEN` now works without `--dev-env`.
+
+### Changed
+
+- `opus keys` is gone. The workspace API-key endpoints it called were retired with
+  the TypeScript API, and the Go backend authenticates personal tokens instead.
+- The TUI ships only finished surfaces. The advanced-features modal, the attachment
+  viewer, the relations modal, the file picker and the URL modal are removed rather
+  than left half-wired, with their `x` (debug pane) and `o` (open URLs) bindings and
+  the attachments client methods. Comments and subtasks stay.
+- The comments modal is a list and a detail view; its attachment preview and
+  `A` binding are gone with the attachment surface.
+- The task table is one windowed table with a header row, replacing the duplicated
+  per-layout rendering, and dates format the same way in every column.
+
+### Fixed
+
+- `opus token list` shows real created and last-used dates. The API answers those
+  fields in camelCase and the model read snake_case, so every token read "never".
+
 ## [0.2.1] - 2026-10-13
 
 ### Fixed

@@ -6,8 +6,8 @@ source tree is laid out.
 ## Prerequisites
 
 - Rust with edition 2021 support and `cargo` on `PATH` (install via [rustup](https://rustup.rs))
-- A reachable Opus instance and an API key
-- `git`, for `install.sh` and `opus upgrade`
+- A reachable Opus instance and a personal API token
+- `git`, for `install.sh`
 
 There is no `mise.toml`, no `Makefile`, no `scripts/check.sh`, no `.githooks/` and no CI
 workflow. Cargo is the entire toolchain.
@@ -28,8 +28,9 @@ cp .env.example .env
 cargo run -- --dev-env
 ```
 
-`dotenv` loads `.env` from the working directory, but the `OPUS_*` values are only consulted
-when `--dev-env` is passed. Without that flag the config file wins and `.env` is inert.
+`dotenv` loads `.env` from the working directory, and the values in it override the config
+file — so `.env` plus `OPUS_TOKEN` drives a run with no `~/.opus.yml` at all. `--dev-env` is
+only needed to run with neither.
 
 ## Running
 
@@ -54,9 +55,8 @@ OPUS_DEBUG=1 cargo run
 tail -f opus_debug.log
 ```
 
-Inside the TUI, `x` toggles a debug pane fed by `add_debug_message`, which is where most API
-failures surface — several code paths log the error there and show a toast rather than
-returning it.
+Inside the TUI, `add_debug_message` collects API failures that a code path logged and turned
+into a toast rather than returning.
 
 ## Tests
 
@@ -73,7 +73,7 @@ coverage is:
 |---|---|
 | `src/opus_parser.rs` | Priority letters and digits, quoted labels, repeat intervals, date forms, `start:` handling, title cleaning |
 | `src/opus_client.rs` | `normalize_base_url` accepting a root, an `/api` suffix, and trailing slashes |
-| `src/url_utils.rs` | URL extraction from task text |
+| `src/opus_client/tokens.rs` | The `/auth/api-tokens` calls and the bearer header they send |
 | `src/tui/utils.rs` | String normalization and comparison |
 | `src/terminal_capabilities.rs` | Terminal feature detection |
 | `src/tui/app/form_edit_state.rs` | Form edit state transitions |
@@ -86,15 +86,14 @@ hardest to notice by eye.
 
 | Path | What it holds |
 |---|---|
-| `src/main.rs` | Upgrade shortcut, clap tree, four config-resolution branches, TUI bootstrap |
+| `src/main.rs` | clap tree, the config-resolution branch per subcommand, TUI bootstrap |
 | `src/lib.rs` | Re-exports, so the crate is usable as `opus_cli` as well as a binary |
-| `src/config.rs` | `OpusConfig`, quick actions, table columns, column layouts |
-| `src/first_run.rs` | A setup wizard that nothing currently calls |
+| `src/config.rs` | `Settings::resolve`, `OpusConfig`, quick actions, table columns, layouts |
 | `src/opus_parser.rs` | The inline magic-syntax parser and its tests |
 | `src/opus_client.rs` | `OpusClient`, `normalize_base_url`, workspaces, connection test |
-| `src/opus_client/` | One module per resource: tasks, projects, labels, users, filters, relations, attachments |
-| `src/opus/models.rs` | `Task`, `Project`, `Label`, `User`, `Comment`, `Workspace`, `Priority` |
-| `src/cli/` | `task` and `workspace` subcommands plus the human / JSON / quiet printers |
+| `src/opus_client/` | One module per resource: tasks, projects, labels, users, filters, relations, tokens |
+| `src/opus/models.rs` | `Task`, `Project`, `Label`, `User`, `Comment`, `Workspace`, `Priority`, `ApiToken` |
+| `src/cli/` | `task`, `workspace` and `token` subcommands plus the human / JSON / quiet printers |
 | `src/ui_loop.rs` | The TUI event loop and the global key table |
 | `src/tui/app/` | `App` state, split by concern: tasks, projects, labels, filters, undo, workspaces |
 | `src/tui/modals/`, `src/tui/pickers/` | Per-overlay input handlers |
@@ -110,9 +109,9 @@ hardest to notice by eye.
 4. Document it in [usage.md](usage.md) and, if an assistant should know about it, in
    `integrations/SKILL.md`.
 
-New top-level subcommands also need registering in `main.rs`, which currently repeats the
-config-resolution block once per branch — reuse an existing block rather than inventing a
-fifth variant.
+New top-level subcommands also need registering in `main.rs`, which runs one branch per
+subcommand and resolves settings through `resolve_settings`. Copy an existing branch, which is
+four lines of `Settings` destructuring, a runtime and an exit code.
 
 ## Known debt
 
@@ -122,8 +121,6 @@ fifth variant.
   file. Changes there are the easiest way to break something unrelated.
 - `src/tui/shortcuts.rs` is empty and `src/opus/client.rs` targets a different, unprefixed
   endpoint shape than `src/opus_client/` — neither is on a live path.
-- `first_run_wizard()` is written but unreachable, while several error messages still tell
-  users to run `opus` for setup.
 
 ## Conventions
 

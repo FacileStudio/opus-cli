@@ -8,7 +8,6 @@ pub mod cli;
 pub mod ui;
 
 pub mod terminal_capabilities;
-pub mod url_utils;
 
 pub use opus_client::*;
 pub use opus_parser::*;

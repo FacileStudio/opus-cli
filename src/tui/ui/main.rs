@@ -1,20 +1,24 @@
 use crate::tui::app::state::App;
 use ratatui::prelude::*;
-use ratatui::style::{Color, Style, Modifier};
-use ratatui::widgets::{Paragraph, Block, Clear};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Clear, Paragraph};
 
 pub const PRIMARY_COLOR: Color = Color::Cyan;
-pub const SECONDARY_COLOR: Color = Color::Magenta;
 pub const SUCCESS_COLOR: Color = Color::Green;
 pub const DIM_COLOR: Color = Color::DarkGray;
-pub const DANGER_COLOR: Color = Color::Red;
 pub const WARNING_COLOR: Color = Color::Yellow;
 
-use super::task_list::draw_tasks_table;
-use super::task_details::draw_task_details;
-use super::modals::{draw_quick_add_modal, draw_edit_modal, draw_confirmation_dialog, draw_quick_actions_modal, draw_add_subtask_modal, draw_subtask_modal};
 use super::form_edit::draw_form_edit_modal;
-use super::pickers::{draw_project_picker_modal, draw_filter_picker_modal, draw_label_picker_modal, draw_workspace_picker_modal};
+use super::modals::{
+    draw_add_subtask_modal, draw_confirmation_dialog, draw_edit_modal, draw_quick_actions_modal,
+    draw_quick_add_modal, draw_subtask_modal,
+};
+use super::pickers::{
+    draw_filter_picker_modal, draw_label_picker_modal, draw_project_picker_modal,
+    draw_workspace_picker_modal,
+};
+use super::task_details::draw_task_details;
+use super::task_list::draw_tasks_table;
 
 pub fn hex_to_color(hex: &str) -> Color {
     let hex = hex.trim_start_matches('#');
@@ -33,47 +37,21 @@ pub fn hex_to_color(hex: &str) -> Color {
 pub fn draw(f: &mut Frame, app: &App) {
     let body_area = f.size();
 
-    let _main_layout = if app.show_debug_pane {
-        let vertical_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(10),
-                Constraint::Length(10),
-            ])
-            .split(body_area);
-
-        let main_horizontal = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(60),
-                Constraint::Percentage(40),
-            ])
-            .split(vertical_chunks[0]);
-
-        draw_tasks_table(f, app, main_horizontal[0]);
-        if app.show_info_pane {
-            draw_task_details(f, app, main_horizontal[1]);
-        }
-        draw_debug_pane(f, app, vertical_chunks[1]);
-    } else if app.show_info_pane {
+    if app.show_info_pane {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)].as_ref())
+            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
             .split(body_area);
         draw_tasks_table(f, app, chunks[0]);
         draw_task_details(f, app, chunks[1]);
     } else {
         draw_tasks_table(f, app, body_area);
-    };
+    }
 
     if app.show_help_modal {
-        crate::tui::ui::modals::draw_help_modal(f, app);
-    } else if app.show_advanced_help_modal {
-        crate::tui::ui::modals::draw_advanced_help_modal(f, app);
-    } else if app.show_advanced_features_modal {
-        crate::tui::ui::modals::draw_advanced_features_modal(f, app);
+        super::modals::draw_help_modal(f, app);
     } else if app.show_sort_modal {
-        crate::tui::ui::modals::draw_sort_modal(f, app);
+        super::modals::draw_sort_modal(f, app);
     } else if app.show_form_edit_modal {
         draw_form_edit_modal(f, app);
         if app.show_project_picker {
@@ -97,103 +75,71 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_workspace_picker_modal(f, app);
     } else if app.show_quick_actions_modal {
         draw_quick_actions_modal(f, app);
-    } else if app.show_attachment_modal {
-        if let Some(ref modal) = app.attachment_modal {
+    } else if app.show_comments_modal {
+        if let Some(ref modal) = app.comments_modal {
             modal.draw(f, f.size());
         }
-    } else if app.show_file_picker_modal {
-        if let Some(ref modal) = app.file_picker_modal {
-            modal.draw(f, f.size());
-        }
-    } else if let Some(ref modal) = app.comments_modal {
-        modal.draw(f, f.size());
     } else if app.show_subtask_modal {
         draw_subtask_modal(f, app);
     } else if app.show_add_subtask_modal {
         draw_add_subtask_modal(f, app);
     }
 
-    {
-        let status_area = Rect {
-            x: 0,
-            y: f.size().height.saturating_sub(1),
-            width: f.size().width,
-            height: 1,
-        };
-
-        if app.refreshing {
-            let refresh_msg = Paragraph::new("Refreshing...")
-                .style(Style::default().fg(WARNING_COLOR).add_modifier(Modifier::BOLD))
-                .alignment(Alignment::Center);
-            f.render_widget(Clear, status_area);
-            f.render_widget(refresh_msg, status_area);
-        } else {
-            let ws_name = app.get_current_workspace_name();
-            let ws_text = format!(" {} ", ws_name);
-            let ws_span = Span::styled(ws_text, Style::default().fg(DIM_COLOR));
-            let status_line = Paragraph::new(Line::from(vec![
-                Span::styled(" W ", Style::default().fg(Color::Black).bg(DIM_COLOR).add_modifier(Modifier::BOLD)),
-                ws_span,
-            ]));
-            f.render_widget(Clear, status_area);
-            f.render_widget(status_line, status_area);
-        }
-    }
-
-    if let Some(notification) = app.get_layout_notification() {
-        let notification_width = (notification.len() as u16 + 4).min(f.size().width / 2);
-        let notification_area = Rect {
-            x: f.size().width.saturating_sub(notification_width + 2),
-            y: f.size().height.saturating_sub(6),
-            width: notification_width,
-            height: 3,
-        };
-        let notification_msg = Paragraph::new(notification.clone())
-            .block(Block::default().title("Layout"))
-            .style(Style::default().fg(PRIMARY_COLOR).add_modifier(Modifier::BOLD))
-            .alignment(Alignment::Center);
-        f.render_widget(Clear, notification_area);
-        f.render_widget(notification_msg, notification_area);
-    }
+    draw_status_bar(f, app);
 
     if let Some(toast) = app.get_toast() {
-        let toast_width = (toast.len() as u16 + 4).min(f.size().width / 2);
-        let toast_area = Rect {
-            x: f.size().width.saturating_sub(toast_width + 2),
-            y: f.size().height.saturating_sub(3),
-            width: toast_width,
-            height: 3,
-        };
-        let toast_msg = Paragraph::new(toast.clone())
-            .block(Block::default().title("Success"))
-            .style(Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD))
-            .alignment(Alignment::Center);
-        f.render_widget(Clear, toast_area);
-        f.render_widget(toast_msg, toast_area);
+        draw_toast(f, toast, f.size());
     }
 }
 
-fn draw_debug_pane(f: &mut Frame, app: &App, area: Rect) {
-    let debug_block = Block::default()
-        .title("Debug Log")
-        .style(Style::default().fg(WARNING_COLOR));
+fn draw_status_bar(f: &mut Frame, app: &App) {
+    let area = Rect {
+        x: 0,
+        y: f.size().height.saturating_sub(1),
+        width: f.size().width,
+        height: 1,
+    };
+    f.render_widget(Clear, area);
 
-    let debug_text: Vec<String> = app.debug_messages
-        .iter()
-        .rev()
-        .take(area.height as usize)
-        .map(|(timestamp, message)| {
-            let time_str = timestamp.format("%H:%M:%S").to_string();
-            format!("[{}] {}", time_str, message)
-        })
-        .collect();
+    if app.refreshing {
+        f.render_widget(
+            Paragraph::new("Refreshing...")
+                .style(Style::default().fg(WARNING_COLOR))
+                .alignment(Alignment::Center),
+            area,
+        );
+        return;
+    }
 
-    let debug_content = debug_text.join("\n");
+    let line = Line::from(vec![
+        Span::styled(
+            app.get_current_workspace_name(),
+            Style::default().fg(PRIMARY_COLOR),
+        ),
+        Span::styled(
+            format!("  {} tasks", app.tasks.len()),
+            Style::default().fg(DIM_COLOR),
+        ),
+        Span::styled(
+            "   ? help  a add  e edit  q quit",
+            Style::default().fg(DIM_COLOR),
+        ),
+    ]);
+    f.render_widget(Paragraph::new(line), area);
+}
 
-    let debug_widget = Paragraph::new(debug_content)
-        .block(debug_block)
-        .style(Style::default().fg(Color::White))
-        .scroll((0, 0));
-
-    f.render_widget(debug_widget, area);
+fn draw_toast(f: &mut Frame, toast: &str, screen: Rect) {
+    let width = (toast.len() as u16 + 4).min(screen.width / 2);
+    let area = Rect {
+        x: screen.width.saturating_sub(width + 2),
+        y: screen.height.saturating_sub(3),
+        width,
+        height: 3,
+    };
+    let widget = Paragraph::new(toast.to_string())
+        .block(Block::default())
+        .style(Style::default().fg(SUCCESS_COLOR))
+        .alignment(Alignment::Center);
+    f.render_widget(Clear, area);
+    f.render_widget(widget, area);
 }

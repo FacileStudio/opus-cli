@@ -3,6 +3,14 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Credential variables, checked in order: the first non-empty one wins.
+///
+/// `OPUS_TOKEN` is the documented name, and it is what the Developer settings
+/// page hands out. The other two are accepted because they are the spellings
+/// people reach for, and a credential channel that answers to one name only
+/// fails in a way that reads as a bad token.
+const TOKEN_VARS: [&str; 3] = ["OPUS_TOKEN", "OPUS_API_KEY", "OPUS_KEY"];
+
 /// Everything the CLI needs to talk to an Opus instance, resolved once from
 /// every source that is allowed to supply it.
 #[derive(Debug, Clone)]
@@ -28,14 +36,14 @@ impl Settings {
     ) -> Result<Self, String> {
         let config = OpusConfig::load_from_path(config_path);
 
-        if config.is_none() && !dev_env && env_value("OPUS_API_KEY").is_none() {
+        if config.is_none() && !dev_env && env_token().is_none() {
             return Err(match config_path {
                 Some(path) => format!("config file not found at {}", path),
-                None => "no config found — create ~/.opus.yml, or set OPUS_API_KEY".to_string(),
+                None => "no config found — create ~/.opus.yml, or set OPUS_TOKEN".to_string(),
             });
         }
 
-        let api_key = env_value("OPUS_API_KEY")
+        let api_key = env_token()
             .or_else(|| {
                 config
                     .as_ref()
@@ -44,8 +52,8 @@ impl Settings {
             })
             .or_else(|| dev_env.then(|| "demo-token".to_string()))
             .ok_or_else(|| {
-                "no API key configured — generate one at Settings > Account > Developer, \
-                 or set OPUS_API_KEY"
+                "no API token configured — create one with `opus token create`, set \
+                 OPUS_TOKEN, or put api_key in ~/.opus.yml"
                     .to_string()
             })?;
 
@@ -71,6 +79,10 @@ impl Settings {
             config,
         })
     }
+}
+
+fn env_token() -> Option<String> {
+    TOKEN_VARS.iter().find_map(|name| env_value(name))
 }
 
 fn env_value(name: &str) -> Option<String> {

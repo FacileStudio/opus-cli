@@ -386,14 +386,13 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
         Line::from(vec![Span::styled("h / l", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Switch layouts backward/forward")]),
         Line::from(vec![Span::styled("H / L", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Cycle task filters (active/all/etc)")]),
         Line::from(vec![Span::styled("Space", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Quick actions modal")]),
-        Line::from(vec![Span::styled(".", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Advanced features modal")]),
         Line::raw("")
     ];
 
     // Quick actions section
     if let Some(ref quick_actions) = app.config.quick_actions {
         if !quick_actions.is_empty() {
-            help_lines.push(Line::raw("─ Quick Actions (Space for modal, . then key for direct) ─"));
+            help_lines.push(Line::raw("─ Quick Actions (Space for modal) ─"));
             for action in quick_actions {
                 help_lines.push(Line::from(vec![
                     Span::styled(format!("{}", action.key), Style::default().add_modifier(Modifier::BOLD)),
@@ -417,9 +416,9 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
         } else {
             "(set, hidden)".to_string()
         };
-        help_lines.push(Line::raw(format!("API Key: {}", obfuscated)));
+        help_lines.push(Line::raw(format!("API token: {}", obfuscated)));
     } else {
-        help_lines.push(Line::raw("API Key: (not set)"));
+        help_lines.push(Line::raw("API token: (not set)"));
     }
     if let Some(ref proj) = app.config.default_project {
         help_lines.push(Line::raw(format!("Default Project: {}", proj)));
@@ -429,119 +428,6 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
         .wrap(Wrap { trim: true })
         .alignment(Alignment::Left);
     f.render_widget(help_paragraph, modal_area);
-}
-
-pub fn draw_advanced_help_modal(f: &mut Frame, _app: &App) {
-    let area = f.size();
-    let modal_width = (area.width as f32 * 0.7) as u16;
-    let modal_height = 20;
-    let x = (area.width.saturating_sub(modal_width)) / 2;
-    let y = (area.height.saturating_sub(modal_height)) / 2;
-    let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    f.render_widget(Clear, modal_area);
-    let block = Block::default()
-        .title(" Advanced Features (. key) ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
-    let help_lines = vec![
-        Line::from(vec![Span::styled("Press . then a key for advanced features:", Style::default().add_modifier(Modifier::BOLD))]),
-        Line::raw(""),
-        Line::from(vec![Span::styled(".a", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Attachment management")]),
-        Line::from(vec![Span::styled(".c", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Comments")]),
-        Line::from(vec![Span::styled(".r", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Task relations (coming soon)")]),
-        Line::from(vec![Span::styled(".h", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Task history (coming soon)")]),
-        Line::from(vec![Span::styled(".s", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Subtasks (coming soon)")]),
-        Line::from(vec![Span::styled(".t", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Time tracking (coming soon)")]),
-        Line::from(vec![Span::styled(".?", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Show this help")]),
-        Line::raw(""),
-        Line::from(vec![Span::styled("Note:", Style::default().fg(Color::Yellow)), Span::raw(" These features are planned for future releases.")]),
-        Line::raw(""),
-        Line::from(vec![Span::styled("Press q or ESC to close", Style::default().fg(Color::Gray))]),
-    ];
-    let help_paragraph = Paragraph::new(help_lines)
-        .block(block)
-        .wrap(Wrap { trim: true })
-        .alignment(Alignment::Left);
-    f.render_widget(help_paragraph, modal_area);
-}
-
-pub fn draw_advanced_features_modal(f: &mut Frame, app: &App) {
-    let area = f.size();
-
-    // Define advanced features
-    let advanced_features = vec![
-        ("a", "Attachment Management", "View and manage task attachments", true),
-        ("c", "Comments", "View and add task comments", true),
-        ("r", "Task Relations", "Manage task dependencies and links", false),
-    ];
-
-    // Calculate modal size
-    let num_features = advanced_features.len();
-    let base_height = 5;
-    let feature_height = num_features as u16;
-    let modal_height = (base_height + feature_height).min(area.height - 4);
-    let modal_width = 70.min(area.width - 4);
-
-    let x = (area.width.saturating_sub(modal_width)) / 2;
-    let y = (area.height.saturating_sub(modal_height)) / 2;
-    let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-
-    // Clear the area behind the modal
-    f.render_widget(Clear, modal_area);
-
-    let mut lines = vec![];
-
-    lines.push(Line::from(vec![
-        Span::raw("Select a feature (Enter to activate, Esc/q to cancel):")
-    ]));
-    lines.push(Line::raw(""));
-
-    for (i, (key, title, description, available)) in advanced_features.iter().enumerate() {
-        let is_selected = i == app.selected_advanced_feature_index;
-        let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
-
-        if is_selected {
-            let status = if *available { "(Available)" } else { "(Coming Soon)" };
-            let text = format!(" {} {} - {} {}", key, title, description, status);
-            lines.push(Line::from(vec![Span::styled(text, sel)]));
-        } else {
-            let key_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
-            let status_style = if *available {
-                Style::default().fg(Color::Green)
-            } else {
-                Style::default().fg(Color::Yellow)
-            };
-            let status_text = if *available { "(Available)" } else { "(Coming Soon)" };
-
-            lines.push(Line::from(vec![
-                Span::styled(format!(" {} ", key), key_style),
-                Span::raw(" "),
-                Span::styled(*title, Style::default()),
-                Span::raw(" - "),
-                Span::styled(*description, Style::default().fg(Color::Gray)),
-                Span::raw(" "),
-                Span::styled(status_text, status_style),
-            ]));
-        }
-    }
-
-    lines.push(Line::raw(""));
-    lines.push(Line::from(vec![
-        Span::styled("Navigation: ", Style::default().fg(Color::Cyan)),
-        Span::raw("↑/↓ to select, Enter to activate, Esc/q to cancel")
-    ]));
-
-    let block = Block::default()
-        .title(" Advanced Features ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
-
-    let para = Paragraph::new(lines)
-        .block(block)
-        .wrap(Wrap { trim: true })
-        .alignment(Alignment::Left);
-
-    f.render_widget(para, modal_area);
 }
 
 pub fn draw_sort_modal(f: &mut Frame, app: &App) {

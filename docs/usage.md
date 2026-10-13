@@ -16,14 +16,20 @@ With no command and no `--quick`, `opus` launches the TUI.
 | Flag | Value | What it does |
 |---|---|---|
 | `-c`, `--config <FILE>` | path | Read config from `FILE` instead of `~/.opus.yml` |
-| `--dev-env` | — | Ignore the config file and read `OPUS_*` environment variables |
+| `--dev-env` | — | Run without requiring a config file, on localhost defaults |
 | `--quick <TASK_STRING>` | string | Create one task from inline syntax and exit |
 | `-w`, `--workspace <ID>` | string | Override the workspace ID for this run only |
+| `--no-color` | — | Disable colored output |
 | `-V`, `--version` | — | Print the version from `Cargo.toml` |
 | `-h`, `--help` | — | Print help |
 
 `--quick` takes precedence over any subcommand. `-w` is applied after the config or
 environment is resolved, and is never written back to disk.
+
+Values resolve as flag > environment variable > config file > built-in default, so `OPUS_TOKEN`
+and `OPUS_API_URL` point the CLI at an instance without any config file. `--dev-env` only
+relaxes the requirement for one: it lets a run start with no config at all and supplies the
+throwaway localhost defaults.
 
 ## `opus`
 
@@ -166,69 +172,59 @@ On a match it writes `workspace_id` to `~/.opus.yml` and prints a confirmation. 
 lists the available workspaces on stderr and exits 1. Under `--dev-env` there is no config
 object to persist to, so the switch prints its confirmation without saving.
 
-## `opus keys`
+## `opus token`
 
-Manage API keys for programmatic access to the Opus API.
+Manage personal API tokens. A token authenticates as you on every route a browser session
+does, and unlike a login it never idles out, which is what a cron job or an agent needs.
 
-`keys` requires a subcommand.
+`token` requires a subcommand, and every subcommand authenticates with the credential the run
+resolved — so `opus token list` under one token shows that account's tokens.
 
-### `opus keys list`
+### `opus token list`
 
 ```sh
-opus keys list
-opus keys list --app web
-opus keys list --json
+opus token list
+opus token list --json
 ```
 
-Lists API keys, displaying ID, application name, kind (secret or public), prefix, status (active or revoked), quota, and creation date.
+Prints an `ID`, `NAME`, `CREATED`, `LAST USED` table, newest first. Only named tokens are
+listed: a browser login is a session in the same table but never appears here, and
+`LAST USED` is the day porte last saw the token.
 
 | Flag | Value | What it does |
 |---|---|---|
-| `--app <NAME>` | string | Filter keys by application name |
-| `--json` | — | Output raw JSON list |
+| `--json` | — | Output the raw token array, camelCase fields included |
 
-### `opus keys create`
+### `opus token create`
 
 ```sh
-opus keys create --app web
-opus keys create --app web --public --origins http://localhost:3000,https://app.example.com --quota 1000
-opus keys create --app my-service --json
+opus token create --name laptop
+opus token create -n ci --json
 ```
 
-Creates a new API key and prints the raw token once. Save this token immediately because the server hashes it and cannot display it again.
+Creates a personal token and prints it **once**, with a reminder that the server keeps only a
+hash. The plaintext sits on the line under the confirmation, so `--json` is the better shape
+for a script.
 
 | Flag | Value | What it does |
 |---|---|---|
-| `--app <NAME>` | string | Application name (required) |
-| `--public` | — | Create a public browser key instead of a secret key |
-| `--origins <URLS>` | comma-separated strings | Allowed CORS origins for public keys |
-| `--quota <N>` | integer | Daily request quota for public keys |
-| `--json` | — | Output response as JSON |
+| `-n`, `--name <NAME>` | string | Required. The label the token is listed under |
+| `--json` | — | Output the created token object, secret included |
 
-### `opus keys revoke`
+### `opus token revoke`
 
 ```sh
-opus keys revoke 42
-opus keys revoke 42 --yes
-opus keys revoke 42 --json
+opus token revoke 42
+opus token revoke 42 --yes
 ```
 
-Revokes an existing API key by ID. Prompts for confirmation unless `--yes` is supplied.
+Revokes one token by ID, which ends it immediately: the next request carrying it answers 401.
+Prompts for confirmation when stdin is a terminal and `--yes` is absent.
 
 | Flag | Value | What it does |
 |---|---|---|
-| `-y`, `--yes` | — | Confirm revocation without interactive prompt |
-| `--json` | — | Output revocation confirmation as JSON |
-
-## `opus upgrade`
-
-```sh
-opus upgrade
-```
-
-Clones the repository into a temporary directory and runs `cargo install --path --force`, so
-`git` and `cargo` must be on `PATH`. This is handled before clap parses anything, so it takes
-no flags, reads no config, and does not appear in `opus --help`.
+| `-y`, `--yes` | — | Confirm without prompting |
+| `--json` | — | Output `{"id": ..., "revoked": true}` |
 
 ## Inline syntax
 
@@ -276,12 +272,11 @@ weekly.
 | `j` / `k` / `Down` / `Up` | Move the selection |
 | `g` / `G` | Jump to top / bottom |
 | `i` | Toggle the info (detail) pane |
-| `x` | Toggle the debug pane |
 | `r` | Refresh tasks, projects and filters |
 | `h` / `l` | Previous / next column layout |
 | `H` / `L` | Cycle the task filter (active, all, and so on) |
 | `Esc` | Close the open modal or dialog |
-| `q` | Quit with confirmation, or close the advanced modal |
+| `q` | Quit with confirmation, or close the open modal |
 | `qq` | Quit immediately (two `q` within one second) |
 | `Q` | Quit immediately, no confirmation |
 | `Ctrl-Z` | Undo the last local task edit |
@@ -298,7 +293,7 @@ weekly.
 | `D` | Delete, via the confirmation dialog |
 | `s` | Star / unstar |
 | `S` | Add a subtask under the selected task |
-| `o` | Open URLs found in the selected task |
+| `c` | Comments on the selected task |
 
 ### Pickers and modals
 
@@ -308,11 +303,14 @@ weekly.
 | `f` | Filter picker |
 | `W` | Workspace picker |
 | `Space` | Quick-actions modal, driven by `quick_actions` in the config |
-| `.` | Advanced features modal |
 
-From the advanced modal: `a` attachments, `c` comments, `r` task relations (not implemented
-yet — it shows a toast). Confirmation dialogs take `Enter` or `y` to confirm, `n` or `Esc` to
-cancel.
+Confirmation dialogs take `Enter` or `y` to confirm, `n` or `Esc` to cancel. The comments modal
+switches between the list and the selected comment with `Tab`, moves with `Up` / `Down`, and
+submits with `Enter`.
+
+Attachments, task relations, a file picker and a URL viewer were once reachable from an
+advanced-features modal. They were never finished, so they are gone: the modal, the keys, and
+the client calls behind them.
 
 There is no `/` search binding in the TUI, despite what older documentation claimed.
 

@@ -2,7 +2,7 @@
 
 Terminal client for [Opus](https://github.com/FacileStudio/opus), the Facile self-hosted
 project management app. Provides a full-screen interactive TUI (ratatui) and scriptable
-CLI subcommands for tasks, workspaces, and API keys.
+CLI subcommands for tasks, workspaces, and personal API tokens.
 
 ## Tech stack
 
@@ -21,7 +21,7 @@ cargo build --release    # optimized (LTO + strip)
 cargo test               # run all unit tests
 cargo run                # launch interactive TUI
 cargo run -- task list   # list tasks
-cargo run -- keys list   # list API keys
+cargo run -- token list  # list API tokens
 ```
 
 ## Project structure
@@ -29,13 +29,13 @@ cargo run -- keys list   # list API keys
 ```
 src/
   main.rs         CLI entry point, clap definition, subcommand handlers, TUI launcher
-  config.rs       Loads ~/.opus.yml (server URL, API key, workspace ID)
+  config.rs       Resolves ~/.opus.yml and the OPUS_* overrides (URL, token, workspace ID)
   opus/
     models.rs     Domain models (Task, Workspace, Project, Key, User, Label)
     client.rs     Legacy helper client
   opus_client.rs  REST client root and base URL normalization
-  opus_client/    Client methods by domain (tasks, projects, keys, labels, users, filters)
-  cli/            CLI command modules (task, workspace, keys, output formatting)
+  opus_client/    Client methods by domain (tasks, projects, tokens, labels, users, filters)
+  cli/            CLI command modules (task, workspace, token, output formatting)
   tui/            TUI state machine, events, modals, pickers, ratatui rendering
   opus_parser.rs  Magic inline task syntax parser
   ui.rs           Terminal output styling (ANSI colors, status markers)
@@ -48,7 +48,7 @@ integrations/
 - Interactive TUI for task and project management
 - Quick task creation via inline syntax (`--quick` or `task add`)
 - Workspace management and switching
-- API key management (`keys list`, `keys create`, `keys revoke`)
+- Personal API token management (`token list`, `token create`, `token revoke`)
 - JSON output support across scriptable commands
 
 ## Conventions

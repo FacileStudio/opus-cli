@@ -12,7 +12,6 @@ mod config;
 mod cli;
 
 mod ui_loop;
-mod url_utils;
 
 use crate::debug::debug_log;
 use crate::ui_loop::run_ui;
@@ -76,7 +75,7 @@ fn main() {
         )
         .subcommand(cli::task::subcommand())
         .subcommand(cli::workspace::subcommand())
-        .subcommand(cli::keys::subcommand())
+        .subcommand(cli::token::subcommand())
         .get_matches();
 
     if matches.get_flag("no-color") {
@@ -158,7 +157,7 @@ fn main() {
         std::process::exit(if result.is_ok() { 0 } else { 1 });
     }
 
-    if let Some(("keys", sub_matches)) = matches.subcommand() {
+    if let Some(("token", sub_matches)) = matches.subcommand() {
         let config::Settings {
             api_url,
             api_key,
@@ -169,7 +168,7 @@ fn main() {
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {
             let client = crate::opus_client::OpusClient::new(api_url, api_key, workspace_id);
-            cli::keys::handle(&client, sub_matches).await
+            cli::token::handle(&client, sub_matches).await
         });
         if let Err(e) = &result {
             ui::error(&format!("{e}"));

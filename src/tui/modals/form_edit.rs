@@ -239,6 +239,7 @@ async fn save_form_task(
         let update = crate::opus_client::tasks::OpusTaskUpdate {
             title: Some(form.title.clone()),
             description: Some(form.description.clone()),
+            status: None,
             priority: form.priority.clone(),
             due_date: form.due_date.as_ref().and_then(|d| {
                 chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d")
@@ -252,7 +253,7 @@ async fn save_form_task(
                     .and_then(|nd| nd.and_hms_opt(0, 0, 0))
                     .map(|ndt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(ndt, chrono::Utc))
             }),
-            column_id: None,
+            user_id: None,
         };
 
         let result = api_client_guard.update_task(&form.task_id, &update).await;
@@ -275,10 +276,6 @@ async fn save_form_task(
                 app.project_colors = project_colors;
                 app.apply_task_filter();
 
-                app.flash_task_id = Some(task.id.clone());
-                app.flash_start = Some(Local::now());
-                app.flash_cycle_count = 0;
-                app.flash_cycle_max = 6;
 
                 debug_log(&format!("Tasks refreshed. Total tasks: {}", app.tasks.len()));
                 Ok(())

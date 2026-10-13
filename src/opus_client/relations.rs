@@ -59,39 +59,6 @@ impl std::fmt::Display for RelationType {
 }
 
 impl super::OpusClient {
-    pub async fn get_task_relations(
-        &self,
-        task_id: &str,
-    ) -> Result<Vec<TaskRelation>, Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/api/task-relation/{}", self.base_url, task_id);
-        debug_log(&format!("Fetching relations for task {}", task_id));
-
-        let response = self
-            .client
-            .get(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .send()
-            .await?;
-
-        let status = response.status();
-        if status.is_success() {
-            let relations: Vec<TaskRelation> = response.json().await?;
-            debug_log(&format!(
-                "Got {} relations for task {}",
-                relations.len(),
-                task_id
-            ));
-            Ok(relations)
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!(
-                "Failed to get task relations: {} - {}",
-                status, error_text
-            )
-            .into())
-        }
-    }
-
     pub async fn create_task_relation(
         &self,
         source_task_id: &str,
@@ -126,29 +93,6 @@ impl super::OpusClient {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             Err(format!("Failed to create relation: {} - {}", status, error_text).into())
-        }
-    }
-
-    pub async fn delete_task_relation(
-        &self,
-        relation_id: &str,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("{}/api/task-relation/{}", self.base_url, relation_id);
-
-        let response = self
-            .client
-            .delete(&url)
-            .header("Authorization", format!("Bearer {}", self.auth_token))
-            .send()
-            .await?;
-
-        let status = response.status();
-        if status.is_success() {
-            debug_log(&format!("Deleted relation: {}", relation_id));
-            Ok(())
-        } else {
-            let error_text = response.text().await.unwrap_or_default();
-            Err(format!("Failed to delete relation: {} - {}", status, error_text).into())
         }
     }
 }

@@ -4,7 +4,6 @@ use crate::opus_client::OpusClient;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::debug::debug_log;
-use chrono::Local;
 use crate::tui::app::suggestion_mode::SuggestionMode;
 
 pub async fn handle_edit_modal(
@@ -106,16 +105,15 @@ pub async fn handle_edit_modal(
                 let update = crate::opus_client::tasks::OpusTaskUpdate {
                     title: Some(input.clone()),
                     description: None,
+                    status: None,
                     priority: None,
                     due_date: None,
                     start_date: None,
-                    column_id: None,
+                    user_id: None,
                 };
                 match api_client_guard.update_task(&tid, &update).await {
                     Ok(task) => {
                         debug_log(&format!("SUCCESS: Task updated successfully! ID: {}, Title: '{}'", task.id, task.title));
-                        app.flash_task_id = Some(task.id.clone());
-                        app.flash_start = Some(Local::now());
                         drop(api_client_guard);
                         let (tasks, project_map, project_colors) = client_clone.lock().await.get_tasks_with_projects().await.unwrap_or_default();
                         app.all_tasks = tasks;

@@ -2,7 +2,7 @@
 
 Keyboard-driven terminal client for Opus, the
 self-hosted project management app. The `opus` binary opens a full-screen TUI by default and
-also exposes scriptable `task`, `workspace`, and `keys` subcommands.
+also exposes scriptable `task`, `workspace`, and `token` subcommands.
 
 Tasks are written in an inline "magic" syntax, such as `Review proposal +"Client Work" *urgent
 @jane next monday !4`, parsed locally before the task is created.
@@ -13,9 +13,9 @@ Tasks are written in an inline "magic" syntax, such as `Review proposal +"Client
 - Quick-add and edit tasks in inline syntax: project, labels, assignees, priority, dates, repeats
 - Create, list, show, complete and delete tasks from the shell, with `--json` output
 - List, inspect and switch workspaces, persisting the choice to the config file
-- Manage API keys (list, create secret or public keys, revoke) with JSON output
+- Manage personal API tokens (list, create, revoke) with JSON output
 - Project, filter, label and workspace pickers with fuzzy input
-- Task comments, attachments and subtask relations from inside the TUI
+- Task comments and subtasks from inside the TUI
 - Undo and redo local task edits with `Ctrl-Z` and `Ctrl-Y`
 
 ## Stack
@@ -54,21 +54,21 @@ opus task show <task-id> --json
 opus task add "Ship the release +Internal !u next friday"
 opus workspace list
 opus workspace switch studio
-opus keys list
-opus keys create --app web --public --origins http://localhost:3000
-opus keys revoke 1 --yes
+opus token list
+opus token create --name laptop
+opus token revoke 4 --yes
 ```
 
 Full command reference, inline syntax and TUI keybindings: [docs/usage.md](docs/usage.md).
 
 ## Configuration
 
-The CLI reads `~/.opus.yml`, or the file given to `--config`. Environment variables are only
-consulted when `--dev-env` is passed.
+The CLI reads `~/.opus.yml`, or the file given to `--config`. The environment overrides it, so a
+shell or a CI job can supply everything:
 
 ```yaml
 api_url: "https://opus.facile.studio"
-api_key: "your-api-key"
+api_key: "your-api-token"
 workspace_id: "your-workspace-id"
 default_project: "Inbox"
 ```
@@ -76,12 +76,20 @@ default_project: "Inbox"
 | Key | What it does |
 |---|---|
 | `api_url` | Instance root. A trailing `/api` is stripped, then re-added per request |
-| `api_key` | Sent as `Authorization: Bearer <key>` on every request |
+| `api_key` | Sent as `Authorization: Bearer <token>` on every request |
 | `workspace_id` | Scopes project and task queries; `-w` overrides it for one run |
 | `default_project` | Project for tasks created without `+project`. Falls back to `Inbox` |
 
-Generate the key in the Opus dashboard under Settings > Account > Developer. Full reference:
-[docs/configuration.md](docs/configuration.md).
+| Variable | Replaces |
+|---|---|
+| `OPUS_TOKEN` | `api_key`. Also read as `OPUS_API_KEY` or `OPUS_KEY` |
+| `OPUS_API_URL` | `api_url` |
+| `OPUS_WORKSPACE_ID` | `workspace_id` |
+| `OPUS_DEFAULT_PROJECT` | `default_project` |
+
+Create a token with `opus token create --name <name>`, or in the Opus dashboard under
+Settings > Account > Developer. Precedence is flag > environment > config file > default. Full
+reference: [docs/configuration.md](docs/configuration.md).
 
 ## Structure
 
@@ -90,8 +98,8 @@ src/
   main.rs         clap tree, config resolution, TUI bootstrap
   config.rs       ~/.opus.yml model: layouts, columns, quick actions
   opus_parser.rs  the inline magic-syntax parser
-  opus_client/    REST client split by resource: tasks, projects, keys, labels, filters
-  cli/            non-interactive subcommands (task, workspace, keys) and printers
+  opus_client/    REST client split by resource: tasks, projects, tokens, labels, filters
+  cli/            non-interactive subcommands (task, workspace, token) and printers
   tui/            app state, modals, pickers, ratatui rendering
   ui_loop.rs      the TUI event loop and global key dispatch
 integrations/     SKILL.md, registered with Claude Code and Codex by install.sh

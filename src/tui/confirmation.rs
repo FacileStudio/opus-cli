@@ -4,7 +4,6 @@ use crate::opus_client::OpusClient;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::debug::debug_log;
-use chrono::Local;
 use crate::tui::app::pending_action::PendingAction;
 
 #[allow(dead_code)]
@@ -33,12 +32,6 @@ pub async fn handle_confirmation_dialog(
                         app.project_map = project_map;
                         app.project_colors = project_colors;
                         app.apply_task_filter();
-                        if let Some(task) = app.tasks.get(app.selected_task_index) {
-                            app.flash_task_id = Some(task.id.clone());
-                            app.flash_start = Some(Local::now());
-                        }
-                        app.flash_cycle_count = 0;
-                        app.flash_cycle_max = 6;
                         app.show_confirmation_dialog = false;
                     }
                     PendingAction::QuitApp => {

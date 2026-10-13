@@ -6,16 +6,17 @@ the inline parser, and the shape of the TUI event loop.
 ## Topology
 
 ```
-                   ~/.opus.yml  (or --config FILE, or --dev-env + OPUS_* vars)
-                          │
-                          ▼
-  Terminal ──▶ opus binary ──┬──▶ upgrade        git clone + cargo install
-                             ├──▶ --quick STR    parse, create one task, exit
+         OPUS_TOKEN / OPUS_API_URL / ...   ~/.opus.yml  (or --config FILE)
+                          │                    │
+                          └────────┬───────────┘
+                                   ▼
+  Terminal ──▶ opus binary ──┬──▶ --quick STR    parse, create one task, exit
                              ├──▶ task ...       list / show / add / done / undone / delete
                              ├──▶ workspace ...  list / current / switch
+                             ├──▶ token ...      list / create / revoke
                              └──▶ (no args)      ratatui TUI
                           │
-                          │  reqwest, Authorization: Bearer <api_key>
+                          │  reqwest, Authorization: Bearer <token>
                           ▼
                    Opus API  (api_url + /api/...)
                           │
@@ -29,18 +30,17 @@ requests, prints, and calls `std::process::exit`.
 
 `main()` is deliberately not a single clap match. In order:
 
-1. **`upgrade` is intercepted first.** `args[1] == "upgrade"` short-circuits before clap even
-   runs, which is why `opus upgrade` does not appear in `opus --help`.
-2. `dotenv::dotenv()` loads a `.env` from the working directory if one exists.
-3. clap parses global flags and the `task` / `workspace` subcommands.
-4. `--quick` wins over any subcommand: if present, the task is created and the process exits.
-5. `task` and `workspace` each resolve config, build an `OpusClient`, run on a fresh
+1. `dotenv::dotenv()` loads a `.env` from the working directory if one exists.
+2. clap parses global flags and the `task` / `workspace` / `token` subcommands.
+3. `--quick` wins over any subcommand: if present, the task is created and the process exits.
+4. `task`, `workspace` and `token` each resolve config, build an `OpusClient`, run on a fresh
    `tokio::runtime::Runtime`, and exit with 0 or 1.
-6. Anything left over launches the TUI through `tokio_main`.
+5. Anything left over launches the TUI through `tokio_main`.
 
-Each of those four branches resolves configuration independently, with the same shape: use
-`OPUS_*` environment variables when `--dev-env` is set, otherwise load the YAML file and
-require a non-empty `api_key`. `-w` / `--workspace` overrides the resolved workspace ID last.
+Each of those four branches resolves configuration independently through `Settings::resolve`,
+with the same precedence: flag, then environment variable, then YAML file, then built-in
+default. A missing config file is only an error when neither `--dev-env` nor a credential in
+the environment supplied one. `-w` / `--workspace` overrides the resolved workspace ID last.
 
 ## The HTTP client
 
@@ -54,7 +54,7 @@ So `https://opus.example.com`, `https://opus.example.com/api` and
 `https://opus.example.com/api/` all collapse to the same root, and every call then appends
 its own `/api/...` path. Three unit tests in `src/opus_client.rs` pin that behavior.
 
-Every request sets `Authorization: Bearer <api_key>` by hand. The client is a default
+Every request sets `Authorization: Bearer <token>` by hand. The client is a default
 `reqwest::Client` — no explicit timeout is configured.
 
 ## Endpoints used
@@ -82,13 +82,13 @@ Every request sets `Authorization: Bearer <api_key>` by hand. The client is a de
 | `POST` `DELETE` | `/api/label/{labelId}/task` | Attach and detach a label |
 | `GET` `POST` | `/api/column/{projectId}` | Columns, which back the saved filters |
 | `PUT` | `/api/column/{columnId}` | Rename a column |
-| `GET` | `/api/task-relation/{taskId}` | Relations for a task |
 | `POST` | `/api/task-relation/` | Create a relation, including subtasks |
-| `DELETE` | `/api/task-relation/{relationId}` | Remove a relation |
+| `GET` | `/api/auth/api-tokens` | List the caller's personal API tokens |
+| `POST` | `/api/auth/api-tokens` | Create one; the plaintext comes back once |
+| `DELETE` | `/api/auth/api-tokens/{id}` | Revoke one |
 
 Note the overload on `/api/task/{id}`: `POST` takes a **project** ID and creates a task,
-while `GET`, `PUT` and `DELETE` take a **task** ID. Attachments are not fetched separately —
-they arrive embedded in the task payload.
+while `GET`, `PUT` and `DELETE` take a **task** ID.
 
 Statuses are checked per call; a non-2xx response becomes a
 `Failed to ...: <status> - <body>` boxed error.
@@ -130,4 +130,6 @@ confirmation dialog.
 ## Suite integration
 
 The CLI is a plain REST consumer of the Opus API. It does not use `pool`, `enveloppe` or
-Journal, and it does not speak OIDC — authentication is the dashboard-issued API key only.
+Journal, and it does not speak OIDC. Authentication is a personal API token, which the backend
+models as a labelled porte session: `opus token create` mints one, and every other call sends
+it as a bearer.

@@ -361,70 +361,32 @@ impl Default for Task {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Attachment {
-    #[serde(deserialize_with = "deserialize_id")]
-    pub id: String,
-    #[serde(default, deserialize_with = "deserialize_optional_id")]
-    pub task_id: Option<String>,
-    pub filename: String,
-    pub mime_type: Option<String>,
-    pub size: Option<i64>,
-    pub created_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct FileAttachment {
-    #[serde(deserialize_with = "deserialize_id")]
-    pub id: String,
-    pub name: Option<String>,
-    pub mime: Option<String>,
-    pub size: Option<i64>,
-}
-
-fn is_zero_quota(quota: &i32) -> bool {
-    *quota <= 0
-}
-
+/// One personal API token, which the backend models as a labelled porte
+/// session. `token` is set only on the create answer: the server stores a
+/// hash and can never show the plaintext again.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct Key {
+#[serde(rename_all = "camelCase")]
+pub struct ApiToken {
     pub id: i64,
-    pub app: String,
-    pub kind: String,
-    pub prefix: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub allowed_origins: Vec<String>,
     #[serde(default)]
-    pub daily_quota: i32,
+    pub name: String,
     #[serde(default)]
-    pub used_today: i64,
     pub created_at: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub revoked_at: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CreateKeyRequest {
-    pub app: String,
-    pub kind: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub allowed_origins: Vec<String>,
-    #[serde(default, skip_serializing_if = "is_zero_quota")]
-    pub daily_quota: i32,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CreateKeyResponse {
-    pub key: Key,
-    pub token: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct ListKeysResponse {
     #[serde(default)]
-    pub keys: Vec<Key>,
+    pub last_used_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct CreateTokenRequest {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ListTokensResponse {
+    #[serde(default)]
+    pub tokens: Vec<ApiToken>,
 }
 
 #[cfg(test)]

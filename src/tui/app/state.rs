@@ -53,8 +53,7 @@ pub struct App {
     // Form Edit Modal state
     pub show_form_edit_modal: bool,
     pub form_edit_state: Option<FormEditState>,
-    // Debug pane state
-    pub show_debug_pane: bool,
+    // Debug log state
     pub debug_messages: Vec<(DateTime<Local>, String)>,
     // Undo system
     pub undo_stack: Vec<UndoableAction>,
@@ -88,12 +87,8 @@ pub struct App {
     pub current_filter_id: Option<String>,
     // Active project override from filter
     pub active_project_override: Option<String>,
-    // Flash feedback state
+    // Refresh feedback state
     pub refreshing: bool,
-    pub flash_task_id: Option<String>,
-    pub flash_start: Option<DateTime<Local>>,
-    pub flash_cycle_count: usize,
-    pub flash_cycle_max: usize,
     // Suggestion system
     pub suggestions: Vec<String>,
     pub selected_suggestion: usize,
@@ -104,8 +99,6 @@ pub struct App {
     // Modal states
     pub show_help_modal: bool,
     pub show_advanced_help_modal: bool,
-    pub show_advanced_features_modal: bool,
-    pub selected_advanced_feature_index: usize,
     pub show_sort_modal: bool,
     pub sort_options: Vec<&'static str>,
     pub selected_sort_index: usize,
@@ -126,25 +119,12 @@ pub struct App {
     // Quick action mode - direct key handling after Space
     pub quick_action_mode: bool,
     pub quick_action_mode_start: Option<DateTime<Local>>,
-    // Attachment modal state
-    pub show_attachment_modal: bool,
-    pub attachment_modal: Option<crate::tui::modals::AttachmentModal>,
-
-    // File picker modal state
-    pub show_file_picker_modal: bool,
-    pub file_picker_modal: Option<crate::tui::modals::FilePickerModal>,
-
-    // URL modal state
-    pub show_url_modal: bool,
-    pub url_modal: Option<crate::tui::modals::UrlModal>,
     // Comments modal state
     pub show_comments_modal: bool,
     pub comments_modal: Option<crate::tui::modals::CommentsModal>,
 
     // Layout system
     pub current_layout_name: String,
-    pub layout_notification: Option<String>,
-    pub layout_notification_start: Option<DateTime<Local>>,
     // Toast notifications
     pub toast_notification: Option<String>,
     pub toast_notification_start: Option<DateTime<Local>>,
@@ -160,12 +140,6 @@ pub struct App {
     // Quit handling
     pub last_key_time: Option<DateTime<Local>>,
     pub consecutive_q_count: usize,
-    // Relation modals - DISABLED: Incomplete feature
-    // pub show_relations_modal: bool,
-    // pub show_add_relation_modal: bool,
-    // pub add_relation_input: String,
-    // pub add_relation_cursor_position: usize,
-    // pub relations_task_id: Option<i64>,
 }
 
 #[allow(dead_code)]
@@ -225,7 +199,6 @@ impl App {
             editing_task_id: None,
             show_form_edit_modal: false,
             form_edit_state: None,
-            show_debug_pane: false,
             debug_messages: Vec::new(),
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
@@ -253,10 +226,6 @@ impl App {
             current_filter_id: None,
             active_project_override: None,
             refreshing: false,
-            flash_task_id: None,
-            flash_start: None,
-            flash_cycle_count: 0,
-            flash_cycle_max: 6,
             suggestions: Vec::new(),
             selected_suggestion: 0,
             suggestion_mode: None,
@@ -264,8 +233,6 @@ impl App {
             default_project_name,
             show_help_modal: false,
             show_advanced_help_modal: false,
-            show_advanced_features_modal: false,
-            selected_advanced_feature_index: 0,
             show_sort_modal: false,
             sort_options: vec![
                 "Default (API order)",
@@ -295,17 +262,9 @@ impl App {
             add_subtask_cursor_position: 0,
             quick_action_mode: false,
             quick_action_mode_start: None,
-            show_attachment_modal: false,
-            attachment_modal: None,
-            show_file_picker_modal: false,
-            file_picker_modal: None,
-            show_url_modal: false,
-            url_modal: None,
             show_comments_modal: false,
             comments_modal: None,
             current_layout_name,
-            layout_notification: None,
-            layout_notification_start: None,
             toast_notification: None,
             toast_notification_start: None,
             picker_context: PickerContext::None,
@@ -318,12 +277,6 @@ impl App {
             available_workspaces: Vec::new(),
             last_key_time: None,
             consecutive_q_count: 0,
-            // Relation modals - DISABLED: Incomplete feature
-            // show_relations_modal: false,
-            // show_add_relation_modal: false,
-            // add_relation_input: String::new(),
-            // add_relation_cursor_position: 0,
-            // relations_task_id: None,
         }
     }
 
@@ -387,7 +340,6 @@ impl App {
     pub fn move_cursor_right(&mut self) { if self.quick_add_cursor_position < self.quick_add_input.len() { self.quick_add_cursor_position += 1; } }
     pub fn get_quick_add_input(&self) -> &str { &self.quick_add_input }
     pub fn clear_quick_add_input(&mut self) { self.quick_add_input.clear(); self.quick_add_cursor_position = 0; }
-    pub fn toggle_debug_pane(&mut self) { self.show_debug_pane = !self.show_debug_pane; }
     pub fn add_debug_message(&mut self, message: String) {
         use std::fs::OpenOptions;
         use std::io::Write;
@@ -667,62 +619,6 @@ impl App {
         self.selected_quick_action_index = 0;
     }
 
-    pub fn show_attachment_modal(&mut self) {
-        if let Some(task) = self.get_selected_task() {
-            let attachments = Vec::new();
-            let task_title = task.title.clone();
-            let task_id = task.id.clone();
-
-            self.add_debug_message(format!("Opening attachment modal for task {} (ID: {}) with {} attachments",
-                task_title, task_id, attachments.len()));
-
-            self.close_all_modals();
-            self.show_attachment_modal = true;
-            self.attachment_modal = Some(crate::tui::modals::AttachmentModal::new(
-                attachments,
-                task_title,
-                task_id,
-            ));
-        } else {
-            self.add_debug_message("No task selected for attachment modal".to_string());
-        }
-    }
-
-    pub fn hide_attachment_modal(&mut self) {
-        self.show_attachment_modal = false;
-        self.attachment_modal = None;
-        self.show_file_picker_modal = false;
-        self.file_picker_modal = None;
-    }
-
-    pub fn show_file_picker_modal(&mut self) {
-        self.close_all_modals();
-        self.show_file_picker_modal = true;
-        // Initialize and load directory entries synchronously for immediate display
-        let mut modal = crate::tui::modals::FilePickerModal::new(None);
-        modal.refresh_entries_sync();
-        self.file_picker_modal = Some(modal);
-    }
-
-    pub fn hide_file_picker_modal(&mut self) {
-        self.show_file_picker_modal = false;
-        self.file_picker_modal = None;
-    }
-
-    pub fn show_url_modal(&mut self, urls: Vec<crate::url_utils::UrlWithContext>) {
-        if urls.is_empty() {
-            return;
-        }
-        self.close_all_modals();
-        self.show_url_modal = true;
-        self.url_modal = Some(crate::tui::modals::UrlModal::new(urls));
-    }
-
-    pub fn hide_url_modal(&mut self) {
-        self.show_url_modal = false;
-        self.url_modal = None;
-    }
-
     pub fn show_comments_modal(&mut self) {
         if let Some(task) = self.get_selected_task() {
             let comments = task.comments.clone().unwrap_or_default();
@@ -749,16 +645,6 @@ impl App {
         self.show_advanced_help_modal = false;
     }
 
-    pub fn show_advanced_features_modal(&mut self) {
-        self.close_all_modals();
-        self.show_advanced_features_modal = true;
-        self.selected_advanced_feature_index = 0;
-    }
-
-    pub fn hide_advanced_features_modal(&mut self) {
-        self.show_advanced_features_modal = false;
-    }
-
     pub fn enter_quick_action_mode(&mut self) {
         self.close_all_modals();
         self.quick_action_mode = true;
@@ -782,7 +668,6 @@ impl App {
     pub fn close_all_modals(&mut self) {
         self.show_help_modal = false;
         self.show_advanced_help_modal = false;
-        self.show_advanced_features_modal = false;
         self.show_sort_modal = false;
         self.show_quick_actions_modal = false;
         self.show_quick_add_modal = false;
@@ -792,9 +677,6 @@ impl App {
         self.show_filter_picker = false;
         self.show_confirmation_dialog = false;
         self.show_workspace_picker = false;
-        self.show_attachment_modal = false;
-        self.show_file_picker_modal = false;
-        self.show_url_modal = false;
         self.show_add_subtask_modal = false;
         self.quick_action_mode = false;
         self.quick_action_mode_start = None;
@@ -809,9 +691,6 @@ impl App {
         self.editing_task_id = None;
         self.form_edit_state = None;
         self.selected_quick_action_index = 0;
-        self.attachment_modal = None;
-        self.file_picker_modal = None;
-        self.url_modal = None;
         self.add_subtask_input.clear();
         self.add_subtask_cursor_position = 0;
         // Relations modals - DISABLED: Incomplete feature
@@ -822,14 +701,7 @@ impl App {
         let layouts = self.config.get_column_layouts();
         let old_layout = self.current_layout_name.clone();
         self.current_layout_name = self.config.next_layout(&self.current_layout_name);
-        let (layout_name, description) = self.get_current_layout_info();
-        let message = if let Some(desc) = description {
-            format!("Layout: {} - {} ({})", layout_name, desc, layouts.len())
-        } else {
-            format!("Layout: {} ({})", layout_name, layouts.len())
-        };
-        self.show_layout_notification(message);
-        // Debug message to see what's happening
+        let (layout_name, _description) = self.get_current_layout_info();
         self.add_debug_message(format!("Layout switch: {} -> {} (total: {})", old_layout, layout_name, layouts.len()));
 
         // Apply layout-specific sort if defined
@@ -840,14 +712,7 @@ impl App {
         let layouts = self.config.get_column_layouts();
         let old_layout = self.current_layout_name.clone();
         self.current_layout_name = self.config.previous_layout(&self.current_layout_name);
-        let (layout_name, description) = self.get_current_layout_info();
-        let message = if let Some(desc) = description {
-            format!("Layout: {} - {} ({})", layout_name, desc, layouts.len())
-        } else {
-            format!("Layout: {} ({})", layout_name, layouts.len())
-        };
-        self.show_layout_notification(message);
-        // Debug message to see what's happening
+        let (layout_name, _description) = self.get_current_layout_info();
         self.add_debug_message(format!("Layout switch: {} -> {} (total: {})", old_layout, layout_name, layouts.len()));
 
         // Apply layout-specific sort if defined
@@ -1023,25 +888,6 @@ impl App {
         }
     }
 
-    /// Show layout notification message
-    pub fn show_layout_notification(&mut self, message: String) {
-        self.layout_notification = Some(message);
-        self.layout_notification_start = Some(Local::now());
-    }
-
-    /// Get layout notification if active and within display duration
-    pub fn get_layout_notification(&self) -> Option<&String> {
-        if let (Some(ref notification), Some(start_time)) = (&self.layout_notification, self.layout_notification_start) {
-            // Show notification for 2 seconds
-            if Local::now().signed_duration_since(start_time).num_seconds() < 2 {
-                Some(notification)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
 
     /// Show toast notification message
     pub fn show_toast(&mut self, message: String) {
