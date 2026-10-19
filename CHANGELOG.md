@@ -10,6 +10,17 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-19
+
+### Added
+
+- `s` works as an alias for `S` when adding a subtask to the selected task.
+
+### Removed
+
+- The TUI filter picker and its `f` binding. Saved filters still load from the
+  API and still drive `default_filter`.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added
@@ -121,7 +132,10 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/FacileStudio/opus-cli/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/FacileStudio/opus-cli/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/FacileStudio/opus-cli/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/FacileStudio/opus-cli/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FacileStudio/opus-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/FacileStudio/opus-cli/releases/tag/v0.1.0
