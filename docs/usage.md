@@ -292,7 +292,7 @@ weekly.
 | `E` | Edit the selected task in a form |
 | `d` | Toggle completion, synced to the API |
 | `D` | Delete, via the confirmation dialog |
-| `S` | Add a subtask under the selected task |
+| `S` / `s` | Add a subtask under the selected task |
 | `c` | Comments on the selected task |
 
 ### Pickers and modals
@@ -300,7 +300,6 @@ weekly.
 | Key | Action |
 |---|---|
 | `p` | Project picker |
-| `f` | Filter picker |
 | `w` / `W` | Workspace picker |
 | `Space` | Quick-actions modal, driven by `quick_actions` in the config |
 

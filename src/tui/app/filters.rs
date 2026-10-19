@@ -1,89 +1,15 @@
 use crate::tui::app::state::App;
-use crate::tui::utils::contains_ignore_case;
 
 impl App {
-    #[allow(dead_code)]
-    pub fn show_filter_picker(&mut self) {
-        self.close_all_modals();
-        self.show_filter_picker = true;
-        self.filter_picker_input.clear();
-        self.selected_filter_picker_index = 0;
-        self.update_filtered_filters();
-    }
-    pub fn hide_filter_picker(&mut self) {
-        self.show_filter_picker = false;
-        self.filter_picker_input.clear();
-    }
-    #[allow(dead_code)]
-    pub fn add_char_to_filter_picker(&mut self, c: char) {
-        self.filter_picker_input.insert(self.selected_filter_picker_index, c);
-        self.selected_filter_picker_index += 1;
-        self.update_filtered_filters();
-    }
-    #[allow(dead_code)]
-    pub fn delete_char_from_filter_picker(&mut self) {
-        if self.selected_filter_picker_index > 0 {
-            self.selected_filter_picker_index -= 1;
-            self.filter_picker_input.remove(self.selected_filter_picker_index);
-            self.update_filtered_filters();
-        }
-    }
-    #[allow(dead_code)]
-    pub fn move_filter_picker_up(&mut self) {
-        if !self.filtered_filters.is_empty() {
-            self.selected_filter_picker_index = (self.selected_filter_picker_index + self.filtered_filters.len() - 1) % self.filtered_filters.len();
-        }
-    }
-    #[allow(dead_code)]
-    pub fn move_filter_picker_down(&mut self) {
-        if !self.filtered_filters.is_empty() {
-            self.selected_filter_picker_index = (self.selected_filter_picker_index + 1) % self.filtered_filters.len();
-        }
-    }
-    #[allow(dead_code)]
-    pub fn select_filter_picker(&mut self) {
-        if let Some(filter) = self.filtered_filters.get(self.selected_filter_picker_index) {
-            self.current_filter_id = Some(filter.0.clone());
-            self.filter_picker_input = filter.1.clone();
-            self.hide_filter_picker();
-        }
-    }
-    pub fn update_filtered_filters(&mut self) {
-        let query = &self.filter_picker_input;
-        self.filtered_filters = self.filters.iter()
-            .filter(|(_, title)| contains_ignore_case(title, query))
-            .map(|(id, title)| (id.clone(), title.clone()))
-            .collect::<Vec<_>>();
-
-        if self.current_filter_id.is_some() {
-            self.filtered_filters.insert(0, ("__clear__".to_string(), "Clear Filter".to_string()));
-        }
-    }
     pub fn set_filters(&mut self, filters: Vec<(String, String, Option<String>)>) {
         self.filters = filters.iter().map(|(id, title, _)| (id.clone(), title.clone())).collect();
         self.filter_descriptions = filters.into_iter()
             .filter_map(|(id, _, desc)| desc.map(|d| (id, d)))
             .collect();
-        self.update_filtered_filters();
     }
-    #[allow(dead_code)]
     pub fn apply_filter_tasks(&mut self, tasks: Vec<crate::opus::models::Task>) {
         self.tasks = tasks;
         self.apply_hierarchical_sort();
-    }
-    #[allow(dead_code)]
-    pub fn apply_filter(&mut self) {
-        if let Some(_filter_id) = &self.current_filter_id {
-        }
-    }
-    #[allow(dead_code)]
-    pub fn get_current_filter_name(&self) -> String {
-        if let Some(filter_id) = &self.current_filter_id {
-            if let Some(title) = self.filters.iter().find(|f| f.0 == *filter_id).map(|f| &f.1) {
-                return title.clone();
-            }
-        }
-        "No filter".to_string()
     }
     pub fn apply_task_filter(&mut self) {
         self.tasks = self.all_tasks.iter().filter(|task| match self.task_filter {
@@ -195,14 +121,6 @@ impl App {
             override_project.clone()
         } else {
             self.default_project_name.clone()
-        }
-    }
-
-    pub fn clear_filter(&mut self) {
-        self.current_filter_id = None;
-        if self.active_project_override.is_some() {
-            self.active_project_override = None;
-            self.show_toast("Default project restored".to_string());
         }
     }
 

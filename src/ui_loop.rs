@@ -62,11 +62,6 @@ pub async fn run_ui(
                     let mut app_guard = app.lock().await;
                     crate::tui::pickers::project::handle_project_picker(&mut *app_guard, &key);
                     continue;
-                } else if app_guard.show_filter_picker {
-                    drop(app_guard);
-                    let mut app_guard = app.lock().await;
-                    crate::tui::pickers::filter::handle_filter_picker(&mut *app_guard, &key, &client_clone).await;
-                    continue;
                 } else if app_guard.show_workspace_picker {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
@@ -503,7 +498,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         // Cycle filters backward/forward
         Char('H') => { app.cycle_task_filter(); true }
         Char('L') => { app.cycle_task_filter(); true }
-        Char('S') => {
+        Char('s') | Char('S') => {
             // Create a new subtask under the current task
             if app.get_selected_task().is_some() {
                 app.show_add_subtask_modal();
@@ -522,10 +517,6 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         }
         Char('p') => {
             try_show_modal(app, terminal, |app| app.show_project_picker());
-            true
-        }
-        Char('f') => {
-            try_show_modal(app, terminal, |app| app.show_filter_picker());
             true
         }
         Char('w') | Char('W') => {

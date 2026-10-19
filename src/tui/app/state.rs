@@ -75,11 +75,7 @@ pub struct App {
     pub filtered_labels: Vec<(String, String)>,
     pub selected_label_picker_index: usize,
     pub selected_label_ids: Vec<String>,
-    // Filter picker modal state
-    pub show_filter_picker: bool,
-    pub filter_picker_input: String,
-    pub filtered_filters: Vec<(String, String)>,
-    pub selected_filter_picker_index: usize,
+    // Saved filters
     pub filters: Vec<(String, String)>,
     pub filter_descriptions: std::collections::HashMap<String, String>,
     pub current_filter_id: Option<String>,
@@ -212,10 +208,6 @@ impl App {
             filtered_labels: Vec::new(),
             selected_label_picker_index: 0,
             selected_label_ids: Vec::new(),
-            show_filter_picker: false,
-            filter_picker_input: String::new(),
-            filtered_filters: Vec::new(),
-            selected_filter_picker_index: 0,
             filters: Vec::new(),
             filter_descriptions: std::collections::HashMap::new(),
             current_filter_id: None,
@@ -638,7 +630,6 @@ impl App {
         self.show_edit_modal = false;
         self.show_form_edit_modal = false;
         self.show_project_picker = false;
-        self.show_filter_picker = false;
         self.show_confirmation_dialog = false;
         self.show_workspace_picker = false;
         self.show_add_subtask_modal = false;
@@ -963,26 +954,6 @@ impl App {
         result
     }
 
-    pub fn cycle_filter_backward(&mut self) {
-        if self.filters.is_empty() { return; }
-        let idx = match &self.current_filter_id {
-            Some(id) => self.filters.iter().position(|(fid, _)| fid == id).unwrap_or(0),
-            None => 0,
-        };
-        let new_idx = if idx == 0 { self.filters.len() - 1 } else { idx - 1 };
-        self.current_filter_id = Some(self.filters[new_idx].0.clone());
-        self.selected_filter_picker_index = new_idx;
-    }
-    pub fn cycle_filter_forward(&mut self) {
-        if self.filters.is_empty() { return; }
-        let idx = match &self.current_filter_id {
-            Some(id) => self.filters.iter().position(|(fid, _)| fid == id).unwrap_or(0),
-            None => 0,
-        };
-        let new_idx = if idx + 1 >= self.filters.len() { 0 } else { idx + 1 };
-        self.current_filter_id = Some(self.filters[new_idx].0.clone());
-        self.selected_filter_picker_index = new_idx;
-    }
     pub fn refresh_all(&mut self) {
         self.refreshing = true;
         // This should trigger a reload of tasks, projects, filters, etc. in the main event loop
@@ -998,12 +969,6 @@ impl App {
             // In a real app, you'd parse the magic syntax and update all fields
             self.tasks[idx].title = self.edit_input.clone();
         }
-    }
-
-    pub fn set_filters_with_descriptions(&mut self, filters: Vec<(String, String)>, descriptions: std::collections::HashMap<String, String>) {
-        self.filters = filters;
-        self.filter_descriptions = descriptions;
-        self.update_filtered_filters();
     }
 
     // Subtask management methods

@@ -1,4 +1,4 @@
-// Picker rendering (project picker, filter picker)
+// Picker rendering (project picker, label picker, workspace picker)
 
 use crate::tui::app::state::App;
 use ratatui::prelude::*;
@@ -189,68 +189,6 @@ pub fn draw_workspace_picker_modal(f: &mut Frame, app: &App) {
         .wrap(Wrap { trim: false });
     f.render_widget(list_paragraph, modal_chunks[1]);
     let cursor_x = modal_chunks[0].x + 1 + app.workspace_picker_input.len() as u16;
-    let cursor_y = modal_chunks[0].y + 1;
-    if cursor_x < modal_chunks[0].x + modal_chunks[0].width - 1 {
-        f.set_cursor(cursor_x, cursor_y);
-    }
-}
-
-pub fn draw_filter_picker_modal(f: &mut Frame, app: &App) {
-    let area = f.size();
-    let modal_width = (area.width as f32 * 0.6) as u16;
-    let modal_height = (area.height as f32 * 0.7) as u16;
-    let x = (area.width.saturating_sub(modal_width)) / 2;
-    let y = (area.height.saturating_sub(modal_height)) / 2;
-    let modal_area = Rect { x, y, width: modal_width, height: modal_height };
-    f.render_widget(Clear, modal_area);
-    let modal_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(3),
-        ])
-        .split(modal_area);
-    // Input field
-    let input_block = Block::default()
-        .borders(Borders::ALL)
-        .title("Filter Saved Views (type to search)")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().fg(Color::Cyan));
-    let input_paragraph = Paragraph::new(app.filter_picker_input.as_str())
-        .block(input_block)
-        .style(Style::default().fg(Color::Yellow));
-    f.render_widget(input_paragraph, modal_chunks[0]);
-    // Filter list
-    let mut filter_lines = Vec::new();
-    for (i, (id, title)) in app.filtered_filters.iter().enumerate() {
-        let is_selected = i == app.selected_filter_picker_index;
-        let style = if is_selected {
-            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
-        } else if id.is_empty() {
-            Style::default().fg(Color::Red)
-        } else {
-            Style::default().fg(Color::Cyan)
-        };
-        filter_lines.push(Line::from(vec![Span::styled(title, style)]));
-    }
-
-    // Update title based on whether a filter is active
-    let title = if app.current_filter_id.is_some() {
-        "Select Saved Filter (Enter to confirm, Delete to clear current filter, Esc to cancel)"
-    } else {
-        "Select Saved Filter (Enter to confirm, Esc to cancel)"
-    };
-
-    let list_block = Block::default()
-        .borders(Borders::ALL)
-        .title(title)
-        .title_alignment(Alignment::Center);
-    let list_paragraph = Paragraph::new(filter_lines)
-        .block(list_block)
-        .wrap(Wrap { trim: false });
-    f.render_widget(list_paragraph, modal_chunks[1]);
-    // Position cursor in input
-    let cursor_x = modal_chunks[0].x + 1 + app.filter_picker_input.len() as u16;
     let cursor_y = modal_chunks[0].y + 1;
     if cursor_x < modal_chunks[0].x + modal_chunks[0].width - 1 {
         f.set_cursor(cursor_x, cursor_y);

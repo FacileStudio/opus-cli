@@ -14,8 +14,7 @@ use super::modals::{
     draw_quick_add_modal, draw_subtask_modal,
 };
 use super::pickers::{
-    draw_filter_picker_modal, draw_label_picker_modal, draw_project_picker_modal,
-    draw_workspace_picker_modal,
+    draw_label_picker_modal, draw_project_picker_modal, draw_workspace_picker_modal,
 };
 use super::task_details::draw_task_details;
 use super::task_list::draw_tasks_table;
@@ -69,8 +68,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_edit_modal(f, app);
     } else if app.show_confirmation_dialog {
         draw_confirmation_dialog(f, app);
-    } else if app.show_filter_picker {
-        draw_filter_picker_modal(f, app);
     } else if app.show_workspace_picker {
         draw_workspace_picker_modal(f, app);
     } else if app.show_quick_actions_modal {
