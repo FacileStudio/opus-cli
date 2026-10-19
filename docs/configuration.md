@@ -66,7 +66,8 @@ endpoint, `cycle` moves the task to the next column in its project (wrapping fro
 first), and everything else through a full task update.
 
 When `quick_actions` is missing or empty, the modal offers one built-in action: `d` cycles the
-selected task through the project's columns.
+selected task through the project's columns. Outside the modal, `d` runs the action bound to that
+key, and falls back to the column cycle when no action claims it.
 
 ### Column layouts
 

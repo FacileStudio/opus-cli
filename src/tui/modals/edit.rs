@@ -101,29 +101,24 @@ pub async fn handle_edit_modal(
                 let tid = task_id.unwrap();
                 debug_log(&format!("Updating task ID {} with input: '{}'", tid, input));
                 app.hide_edit_modal();
-                let api_client_guard = api_client.lock().await;
-                let update = crate::opus_client::tasks::OpusTaskUpdate {
-                    title: Some(input.clone()),
-                    description: None,
-                    status: None,
-                    priority: None,
-                    due_date: None,
-                    start_date: None,
-                    user_id: None,
+                let update_result = {
+                    let api_client_guard = api_client.lock().await;
+                    api_client_guard.update_task_with_magic(&tid, &input).await
                 };
-                match api_client_guard.update_task(&tid, &update).await {
+                match update_result {
                     Ok(task) => {
                         debug_log(&format!("SUCCESS: Task updated successfully! ID: {}, Title: '{}'", task.id, task.title));
-                        drop(api_client_guard);
                         let (tasks, project_map, project_colors) = client_clone.lock().await.get_tasks_with_projects().await.unwrap_or_default();
                         app.all_tasks = tasks;
                         app.project_map = project_map;
                         app.project_colors = project_colors;
                         app.apply_task_filter();
+                        app.show_toast(format!("Task updated: {}", task.title));
                         debug_log(&format!("Tasks refreshed. Total tasks: {}", app.tasks.len()));
                     }
                     Err(e) => {
                         debug_log(&format!("ERROR: Failed to update task: {}", e));
+                        app.show_toast(format!("Update failed: {}", e));
                     }
                 }
             } else {

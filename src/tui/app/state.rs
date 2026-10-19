@@ -21,6 +21,49 @@ fn priority_to_num(p: &Priority) -> i32 {
     }
 }
 
+fn magic_value(value: &str) -> String {
+    if value.chars().any(|c| c.is_whitespace()) {
+        format!("[{}]", value)
+    } else {
+        value.to_string()
+    }
+}
+
+pub(crate) fn task_magic_syntax(task: &Task, project_name: Option<&str>) -> String {
+    let mut result = task.title.clone();
+
+    if let Some(labels) = &task.labels {
+        for label in labels {
+            result.push_str(&format!(" *{}", magic_value(&label.name)));
+        }
+    }
+
+    if let Some(assignees) = &task.assignees {
+        for assignee in assignees {
+            result.push_str(&format!(" @{}", magic_value(&assignee.name)));
+        }
+    }
+
+    if let Some(project_name) = project_name {
+        if project_name != "Inbox" {
+            result.push_str(&format!(" +{}", magic_value(project_name)));
+        }
+    }
+
+    let priority = priority_to_num(&task.priority);
+    if priority > 0 {
+        result.push_str(&format!(" !{}", priority));
+    }
+
+    if let Some(due_date) = &task.due_date {
+        if due_date.year() > 1900 {
+            result.push_str(&format!(" {}", due_date.format("%Y-%m-%d")));
+        }
+    }
+
+    result
+}
+
 #[derive(Debug, Clone)]
 pub enum SubtaskOperation {
     MakeSubtask,
@@ -347,50 +390,10 @@ impl App {
     pub fn get_edit_input(&self) -> &str { &self.edit_input }
     pub fn clear_edit_input(&mut self) { self.edit_input.clear(); self.edit_cursor_position = 0; }
     fn task_to_magic_syntax(&self, task: &crate::opus::models::Task) -> String {
-        let mut result = task.title.clone();
-
-        if let Some(labels) = &task.labels {
-            for label in labels {
-                result.push_str(&format!(" *{}", label.name));
-            }
-        }
-
-        if let Some(assignees) = &task.assignees {
-            for assignee in assignees {
-                result.push_str(&format!(" @{}", assignee.name));
-            }
-        }
-
-        if let Some(project_name) = self.project_map.get(&task.project_id) {
-            if project_name != "Inbox" {
-                result.push_str(&format!(" +{}", project_name));
-            }
-        }
-
-        match task.priority {
-            Priority::NoPriority => {}
-            ref p => {
-                let num = match p {
-                    Priority::Low => 1,
-                    Priority::Medium => 2,
-                    Priority::High => 3,
-                    Priority::Urgent => 4,
-                    _ => 0,
-                };
-                if num > 0 {
-                    result.push_str(&format!(" !{}", num));
-                }
-            }
-        }
-
-        if let Some(due_date) = &task.due_date {
-            if due_date.year() > 1900 {
-                let formatted_date = due_date.format("%Y-%m-%d").to_string();
-                result.push_str(&format!(" {}", formatted_date));
-            }
-        }
-
-        result
+        task_magic_syntax(
+            task,
+            self.project_map.get(&task.project_id).map(|name| name.as_str()),
+        )
     }
     // --- Task manipulation logic moved to tasks.rs ---
     pub fn update_suggestions(&mut self, input: &str, cursor: usize) {
@@ -1259,5 +1262,118 @@ impl App {
     // pub fn get_task_relation_indicator(&self, _task: &crate::opus::models::Task) -> Option<RelationKind> {
     //     // Return a valid variant for testing, e.g. Precedes
     //     Some(RelationKind::Precedes)
+}
+
+#[cfg(test)]
+mod magic_syntax_tests {
+    use super::*;
+    use crate::opus::models::{Label, User};
+    use crate::opus_parser::{ParsedTask, QuickAddParser};
+    use chrono::Utc;
+    use std::str::FromStr;
+
+    fn label(name: &str) -> Label {
+        Label {
+            id: name.to_string(),
+            name: name.to_string(),
+            color: String::new(),
+            task_id: None,
+            workspace_id: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn user(name: &str) -> User {
+        User {
+            id: name.to_string(),
+            name: name.to_string(),
+            email: String::new(),
+            image: None,
+        }
+    }
+
+    fn stored_task(parsed: &ParsedTask, previous: &Task) -> Task {
+        Task {
+            title: parsed.title.clone(),
+            labels: if parsed.labels.is_empty() {
+                None
+            } else {
+                Some(parsed.labels.iter().map(|name| label(name)).collect())
+            },
+            assignees: if parsed.assignees.is_empty() {
+                None
+            } else {
+                Some(parsed.assignees.iter().map(|name| user(name)).collect())
+            },
+            priority: parsed
+                .priority
+                .as_deref()
+                .map(|name| Priority::from_str(name).unwrap())
+                .unwrap_or_default(),
+            due_date: parsed.due_date,
+            ..previous.clone()
+        }
+    }
+
+    #[test]
+    fn multi_word_values_are_bracketed() {
+        let task = Task {
+            title: "Ship the release".to_string(),
+            labels: Some(vec![label("urgent"), label("high priority")]),
+            assignees: Some(vec![user("jane"), user("john doe")]),
+            priority: Priority::Urgent,
+            due_date: Some(
+                DateTime::parse_from_rfc3339("2026-11-02T23:59:59Z")
+                    .unwrap()
+                    .with_timezone(&Utc),
+            ),
+            ..Task::default()
+        };
+
+        assert_eq!(
+            task_magic_syntax(&task, Some("Client Work")),
+            "Ship the release *urgent *[high priority] @jane @[john doe] +[Client Work] !4 2026-11-02"
+        );
+    }
+
+    #[test]
+    fn parsing_the_rendered_syntax_returns_the_same_fields() {
+        let parser = QuickAddParser::new();
+        let task = Task {
+            title: "Ship the release".to_string(),
+            labels: Some(vec![label("urgent"), label("high priority")]),
+            assignees: Some(vec![user("jane"), user("john doe")]),
+            priority: Priority::Urgent,
+            ..Task::default()
+        };
+
+        let parsed = parser.parse(&task_magic_syntax(&task, Some("Client Work")));
+
+        assert_eq!(parsed.title, "Ship the release");
+        assert_eq!(parsed.labels, vec!["urgent", "high priority"]);
+        assert_eq!(parsed.assignees, vec!["jane", "john doe"]);
+        assert_eq!(parsed.project, Some("Client Work".to_string()));
+        assert_eq!(parsed.priority, Some("urgent".to_string()));
+    }
+
+    #[test]
+    fn repeated_edits_do_not_grow_the_syntax() {
+        let parser = QuickAddParser::new();
+        let mut task = Task {
+            title: "Ship the release".to_string(),
+            labels: Some(vec![label("high priority")]),
+            assignees: Some(vec![user("john doe")]),
+            priority: Priority::High,
+            ..Task::default()
+        };
+
+        let first = task_magic_syntax(&task, Some("Client Work"));
+        for _ in 0..3 {
+            let parsed = parser.parse(&first);
+            task = stored_task(&parsed, &task);
+            assert_eq!(task_magic_syntax(&task, Some("Client Work")), first);
+        }
+    }
 }
 

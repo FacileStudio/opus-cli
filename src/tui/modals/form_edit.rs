@@ -240,6 +240,7 @@ async fn save_form_task(
             title: Some(form.title.clone()),
             description: Some(form.description.clone()),
             status: None,
+            column_id: None,
             priority: form.priority.clone(),
             due_date: form.due_date.as_ref().and_then(|d| {
                 chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d")

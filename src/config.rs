@@ -287,7 +287,6 @@ impl OpusConfig {
             .unwrap_or(false)
     }
 
-    #[allow(dead_code)]
     pub fn get_quick_action(&self, key: &str) -> Option<&QuickAction> {
         self.quick_actions
             .as_ref()

@@ -383,25 +383,14 @@ pub async fn run_ui(
                     continue;
                 }
 
-                // handle async task completion toggle
                 if key.code == KeyCode::Char('d') {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    if let Some(task_id) = app_guard.toggle_task_completion() {
-                        // Sync with API
-                        let client = client_clone.lock().await;
-                        if let Some(task) = app_guard.tasks.iter().find(|t| t.id == task_id) {
-                            let columns = client.get_columns_for_project(&task.project_id).await.unwrap_or_default();
-                            match client.toggle_task_status(&task.id, &task.status, &columns).await {
-                                Ok(_) => {
-                                    app_guard.add_debug_message(format!("Task completion synced to API for task {}", task_id));
-                                },
-                                Err(e) => {
-                                    app_guard.add_debug_message(format!("Failed to sync task completion to API: {}", e));
-                                    app_guard.show_toast(format!("Sync failed: {}", e));
-                                }
-                            }
+                    match app_guard.config.get_quick_action("d").cloned() {
+                        Some(action) => {
+                            apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await
                         }
+                        None => cycle_task_status_and_sync(&mut *app_guard, &client_clone).await,
                     }
                     continue;
                 }
@@ -648,6 +637,7 @@ async fn cycle_task_status_and_sync(
         app.show_toast("No columns found for this project".to_string());
         return;
     };
+    let next_id = next.id.clone();
     let next_slug = next.slug.clone();
     let next_name = next.name.clone();
     let next_is_final = next.is_final;
@@ -657,6 +647,7 @@ async fn cycle_task_status_and_sync(
             for list in [&mut app.tasks, &mut app.all_tasks] {
                 if let Some(task) = list.iter_mut().find(|task| task.id == task_id) {
                     task.status = next_slug.clone();
+                    task.column_id = Some(next_id.clone());
                     task.done = next_is_final;
                 }
             }
@@ -713,6 +704,7 @@ async fn apply_quick_action_and_sync(
                         title: Some(task.title.clone()),
                         description: task.description.clone(),
                         status: None,
+                        column_id: None,
                         priority: Some(task.priority.to_string()),
                         due_date: task.due_date,
                         start_date: task.start_date,

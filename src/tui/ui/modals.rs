@@ -368,7 +368,7 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
         Line::from(vec![Span::styled("j / k", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Move selection down/up")]),
         Line::from(vec![Span::styled("Up / Down", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Move selection up/down")]),
         Line::from(vec![Span::styled("g / G", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Jump to top/bottom")]),
-        Line::from(vec![Span::styled("d", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Toggle task completion")]),
+        Line::from(vec![Span::styled("d", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Move task to the next project column")]),
         Line::from(vec![Span::styled("D", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Delete task")]),
         Line::from(vec![Span::styled("a", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Add task (quick add modal)")]),
         Line::from(vec![Span::styled("e", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Edit task (magic syntax)")]),

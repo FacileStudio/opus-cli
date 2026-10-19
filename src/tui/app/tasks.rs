@@ -4,33 +4,6 @@ use crate::tui::app::pending_action::PendingAction;
 use crate::opus::models::Task;
 
 impl App {
-    #[allow(dead_code)]
-    pub fn toggle_task_completion(&mut self) -> Option<String> {
-        let (task_id, task_title, new_state, previous_state) = if let Some(task) = self.tasks.get_mut(self.selected_task_index) {
-            let previous_state = task.done;
-            let new_state = !task.done;
-            let task_id = task.id.clone();
-            task.done = new_state;
-            (task_id, task.title.clone(), new_state, previous_state)
-        } else {
-            return None;
-        };
-
-        self.add_to_undo_stack(UndoableAction::TaskCompletion {
-            task_id: task_id.clone(),
-            previous_state
-        });
-
-        if new_state {
-            self.add_debug_message(format!("Task completed: {}", task_title));
-            self.show_toast(format!("Task marked complete: {}", task_title));
-        } else {
-            self.add_debug_message(format!("Task uncompleted: {}", task_title));
-            self.show_toast(format!("Task marked incomplete: {}", task_title));
-        }
-        Some(task_id)
-    }
-
     pub fn request_delete_task(&mut self) {
         let (show, message, pending) = if let Some(task) = self.get_selected_task() {
             (true, format!("Delete '{}'? (Y/n)", task.title), Some(PendingAction::DeleteTask { task_id: task.id.clone() }))
@@ -102,24 +75,6 @@ impl App {
     pub fn undo_last_action(&mut self) -> Option<String> {
         if let Some(action) = self.undo_stack.pop() {
             let result = match &action {
-                UndoableAction::TaskCompletion { task_id, previous_state } => {
-                    if let Some(task) = self.tasks.iter_mut().find(|t| t.id == *task_id) {
-                        let task_title = task.title.clone();
-                        let current_state = task.done;
-                        task.done = *previous_state;
-                        self.add_debug_message(format!(
-                            "Undid completion toggle for task '{}'",
-                            task_title
-                        ));
-                        self.redo_stack.push(UndoableAction::TaskCompletion {
-                            task_id: task_id.clone(),
-                            previous_state: current_state,
-                        });
-                        Some(task_id.clone())
-                    } else {
-                        None
-                    }
-                }
                 UndoableAction::TaskDeletion { task, position } => {
                     let tasks_len = self.tasks.len();
                     let insert_position = (*position).min(tasks_len);
@@ -176,24 +131,6 @@ impl App {
     pub fn redo_last_action(&mut self) -> Option<String> {
         if let Some(action) = self.redo_stack.pop() {
             let result = match &action {
-                UndoableAction::TaskCompletion { task_id, previous_state } => {
-                    if let Some(task) = self.tasks.iter_mut().find(|t| t.id == *task_id) {
-                        let task_title = task.title.clone();
-                        let current_state = task.done;
-                        task.done = *previous_state;
-                        self.add_debug_message(format!(
-                            "Redid completion toggle for task '{}'",
-                            task_title
-                        ));
-                        self.undo_stack.push(UndoableAction::TaskCompletion {
-                            task_id: task_id.clone(),
-                            previous_state: current_state,
-                        });
-                        Some(task_id.clone())
-                    } else {
-                        None
-                    }
-                }
                 UndoableAction::TaskDeletion { task, position } => {
                     let tasks_len = self.tasks.len();
                     let insert_position = (*position).min(tasks_len);

@@ -50,6 +50,8 @@ pub struct OpusTaskUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub column_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub due_date: Option<DateTime<Utc>>,
@@ -119,9 +121,9 @@ impl super::OpusClient {
         let created_task = self.create_task(&project_id, &create_payload).await?;
         debug_log(&format!("Task created with ID: {}", created_task.id));
 
-        for label_name in &parsed.labels {
+        for label_name in unique_names(&parsed.labels) {
             debug_log(&format!("Processing label: '{}'", label_name));
-            match self.ensure_label_exists(label_name).await {
+            match self.ensure_label_exists(&label_name).await {
                 Ok(label) => {
                     debug_log(&format!(
                         "Label '{}' exists/created with ID: {}",
@@ -145,8 +147,8 @@ impl super::OpusClient {
             }
         }
 
-        for username in &parsed.assignees {
-            if let Some(user) = self.find_user_by_name(username).await {
+        for username in unique_names(&parsed.assignees) {
+            if let Some(user) = self.find_user_by_name(&username).await {
                 let _ = self.assign_task(&created_task.id, &user.id).await;
             }
         }
@@ -237,7 +239,7 @@ impl super::OpusClient {
         debug_log(&format!("Making PUT request to: {}", url));
 
         let current = self.get_task(task_id).await?;
-        let payload = serde_json::json!({
+        let mut payload = serde_json::json!({
             "title": update
                 .title
                 .clone()
@@ -260,6 +262,14 @@ impl super::OpusClient {
             "startDate": update.start_date.or(current.start_date),
             "userId": update.user_id.clone().or(current.user_id),
         });
+
+        let column_id = update
+            .column_id
+            .clone()
+            .or_else(|| current.column_id.clone());
+        if let (Some(column_id), serde_json::Value::Object(map)) = (column_id, &mut payload) {
+            map.insert("columnId".to_string(), serde_json::Value::String(column_id));
+        }
 
         let json_str = serde_json::to_string(&payload).unwrap_or_default();
         debug_log(&format!("update_task JSON payload: {}", json_str));
@@ -314,9 +324,11 @@ impl super::OpusClient {
         &self,
         task_id: &str,
         status: &str,
+        column_id: Option<&str>,
     ) -> Result<Task, Box<dyn Error + Send + Sync>> {
         let update = OpusTaskUpdate {
             status: Some(status.to_string()),
+            column_id: column_id.map(|id| id.to_string()),
             ..OpusTaskUpdate::default()
         };
         self.update_task(task_id, &update).await
@@ -342,29 +354,7 @@ impl super::OpusClient {
     ) -> Result<Task, Box<dyn Error + Send + Sync>> {
         let next =
             next_column(columns, current_status).ok_or("No columns found for this project")?;
-        self.set_task_status(task_id, &next.slug).await
-    }
-
-    pub async fn toggle_task_status(
-        &self,
-        task_id: &str,
-        current_status: &str,
-        columns: &[Column],
-    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
-        let is_final = columns
-            .iter()
-            .any(|c| c.slug == current_status && c.is_final);
-
-        let target_column = if is_final {
-            columns.iter().min_by_key(|c| c.position)
-        } else {
-            columns.iter().find(|c| c.is_final)
-        };
-
-        match target_column {
-            Some(col) => self.set_task_status(task_id, &col.slug).await,
-            None => Err("No suitable column found for status toggle".into()),
-        }
+        self.set_task_status(task_id, &next.slug, Some(&next.id)).await
     }
 
     pub async fn get_tasks_for_project(
@@ -603,6 +593,7 @@ impl super::OpusClient {
             title: Some(parsed.title.clone()),
             description: None,
             status: None,
+            column_id: None,
             priority: parsed.priority.clone(),
             due_date: parsed.due_date,
             start_date: parsed.start_date,
@@ -611,10 +602,20 @@ impl super::OpusClient {
 
         let updated_task = self.update_task(task_id, &update).await?;
 
-        for label_name in &parsed.labels {
-            match self.ensure_label_exists(label_name).await {
+        let existing_labels = self.get_task_labels(task_id).await.unwrap_or_default();
+        let existing_ids: Vec<String> = existing_labels.iter().map(|l| l.id.clone()).collect();
+
+        for label_name in unique_names(&parsed.labels) {
+            match self.ensure_label_exists(&label_name).await {
                 Ok(label) => {
-                    let _ = self.attach_label(&label.id, &updated_task.id).await;
+                    if !existing_ids.contains(&label.id) {
+                        if let Err(e) = self.attach_label(&label.id, &updated_task.id).await {
+                            debug_log(&format!(
+                                "Failed to add label '{}' to task {}: {}",
+                                label_name, updated_task.id, e
+                            ));
+                        }
+                    }
                 }
                 Err(e) => {
                     debug_log(&format!(
@@ -625,13 +626,15 @@ impl super::OpusClient {
             }
         }
 
-        for username in &parsed.assignees {
-            if let Some(user) = self.find_user_by_name(username).await {
-                let _ = self.assign_task(&updated_task.id, &user.id).await;
+        for username in unique_names(&parsed.assignees) {
+            if let Some(user) = self.find_user_by_name(&username).await {
+                if updated_task.user_id.as_deref() != Some(user.id.as_str()) {
+                    let _ = self.assign_task(&updated_task.id, &user.id).await;
+                }
             }
         }
 
-        Ok(updated_task)
+        self.get_task(task_id).await
     }
 
     pub async fn update_task_from_form(
@@ -669,6 +672,7 @@ impl super::OpusClient {
                     .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
             }),
             status: None,
+            column_id: None,
             user_id: None,
         };
 
@@ -716,6 +720,16 @@ impl super::OpusClient {
     }
 }
 
+pub fn unique_names(names: &[String]) -> Vec<String> {
+    let mut unique: Vec<String> = Vec::new();
+    for name in names {
+        if !unique.iter().any(|existing| existing.eq_ignore_ascii_case(name)) {
+            unique.push(name.clone());
+        }
+    }
+    unique
+}
+
 pub fn next_column<'a>(columns: &'a [Column], current_status: &str) -> Option<&'a Column> {
     let mut ordered: Vec<&Column> = columns.iter().collect();
     ordered.sort_by_key(|column| column.position);
@@ -730,6 +744,9 @@ pub fn next_column<'a>(columns: &'a [Column], current_status: &str) -> Option<&'
 #[cfg(test)]
 mod column_tests {
     use super::*;
+    use crate::opus_client::OpusClient;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     fn column(slug: &str, position: i32, is_final: bool) -> Column {
         let now = Utc::now();
@@ -765,5 +782,73 @@ mod column_tests {
         let columns = vec![column("todo", 0, false), column("done", 1, true)];
         assert_eq!(next_column(&columns, "missing").unwrap().slug, "todo");
         assert!(next_column(&[], "todo").is_none());
+    }
+
+    async fn serve_two(
+        first: &str,
+        second: &str,
+    ) -> (u16, tokio::task::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let first = first.to_string();
+        let second = second.to_string();
+        let handle = tokio::spawn(async move {
+            let mut requests = Vec::new();
+            for body in [first, second] {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.unwrap();
+                requests.push(String::from_utf8_lossy(&buf[..n]).to_string());
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream.write_all(resp.as_bytes()).await.unwrap();
+            }
+            requests
+        });
+        (port, handle)
+    }
+
+    #[tokio::test]
+    async fn cycling_writes_the_new_column_to_the_backend() {
+        let current = r#"{"id":7,"projectId":3,"title":"Ship it","status":"todo","columnId":"todo","priority":"high","position":2,"number":5,"createdAt":"2026-10-13T00:00:00Z","updatedAt":"2026-10-13T00:00:00Z"}"#;
+        let updated = r#"{"id":7,"projectId":3,"title":"Ship it","status":"doing","columnId":"doing","priority":"high","position":2,"number":5,"createdAt":"2026-10-13T00:00:00Z","updatedAt":"2026-10-13T00:00:00Z"}"#;
+        let (port, handle) = serve_two(current, updated).await;
+
+        let client = OpusClient::new(
+            format!("http://127.0.0.1:{}", port),
+            "test-token".to_string(),
+            "ws1".to_string(),
+        );
+        let columns = vec![
+            column("todo", 0, false),
+            column("doing", 1, false),
+            column("done", 2, true),
+        ];
+
+        let task = client.cycle_task_status("7", "todo", &columns).await.unwrap();
+        let requests = handle.await.unwrap();
+
+        assert!(requests[0].starts_with("GET /api/task/7 HTTP/1.1"));
+        assert!(requests[1].starts_with("PUT /api/task/7 HTTP/1.1"));
+        assert!(requests[1].contains(r#""status":"doing""#));
+        assert!(requests[1].contains(r#""columnId":"doing""#));
+        assert_eq!(task.status, "doing");
+        assert_eq!(task.column_id.as_deref(), Some("doing"));
+    }
+
+    #[test]
+    fn repeated_names_collapse_into_one() {
+        let names = vec![
+            "urgent".to_string(),
+            "Urgent".to_string(),
+            "bug".to_string(),
+            "urgent".to_string(),
+        ];
+
+        assert_eq!(unique_names(&names), vec!["urgent", "bug"]);
+        assert!(unique_names(&[]).is_empty());
     }
 }

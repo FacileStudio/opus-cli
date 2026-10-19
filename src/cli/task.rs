@@ -243,7 +243,7 @@ async fn handle_set_status(
     let ids: Vec<&String> = args.get_many::<String>("ids").unwrap().collect();
 
     for id in &ids {
-        match client.set_task_status(id, status).await {
+        match client.set_task_status(id, status, None).await {
             Ok(task) => eprintln!("  {} → {}", task.title, status),
             Err(e) => eprintln!("  {} failed: {}", id, e),
         }

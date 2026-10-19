@@ -288,9 +288,9 @@ weekly.
 | Key | Action |
 |---|---|
 | `a` | Quick-add modal (inline syntax) |
-| `e` | Edit the selected task in inline syntax |
+| `e` | Edit the selected task in inline syntax, parsed on save |
 | `E` | Edit the selected task in a form |
-| `d` | Toggle completion, synced to the API |
+| `d` | Move the task to the next project column, synced to the API |
 | `D` | Delete, via the confirmation dialog |
 | `S` / `s` | Add a subtask under the selected task |
 | `c` | Comments on the selected task |

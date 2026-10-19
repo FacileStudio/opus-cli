@@ -10,6 +10,20 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+### Fixed
+
+- The TUI magic edit modal (`e`) no longer writes the whole inline string into the title. It
+  parses the string, so labels, assignees, priority and dates land in their own fields and the
+  title stops collecting a copy of the syntax on every save.
+- Editing a task no longer attaches labels it already carries, and multi-word labels,
+  assignees and project names are bracketed so a save round trip is stable.
+
+### Changed
+
+- `d` moves the selected task to the next column of its project and writes the new
+  `status` and `columnId` to the backend, so the web UI moves the card too. The key follows a
+  configured `quick_actions` binding for `d` when one exists.
+
 ## [0.5.0] - 2026-10-19
 
 ### Added
