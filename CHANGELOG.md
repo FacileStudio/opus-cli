@@ -10,6 +10,30 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-19
+
+### Added
+
+- The config file is also read from `$XDG_CONFIG_HOME/opus/config.yml`, usually
+  `~/.config/opus/config.yml`, when `~/.opus.yml` is absent. Writes go back to
+  whichever file was loaded.
+- The TUI caches the last session in `$XDG_CACHE_HOME/opus` and renders it before
+  the background refresh finishes, so startup no longer waits on the network. A
+  failed load keeps the cached view and says so instead of blanking the list.
+- The quick-actions modal always has an action. With none configured, `d` cycles
+  the selected task through its project's columns, wrapping at the end.
+
+### Changed
+
+- `w` works as an alias for the workspace picker, alongside `W`.
+- `q` and `Q` both quit immediately. The double-`q` shortcut and the quit
+  confirmation dialog are gone, so leaving does not need a second keypress.
+
+### Removed
+
+- The `s` star keybind. The backend never implemented starring, so the key did
+  nothing and only appeared in the help and usage tables.
+
 ## [0.3.0] - 2026-10-13
 
 ### Added
