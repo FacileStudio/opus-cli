@@ -10,6 +10,8 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-19
+
 ### Fixed
 
 - The TUI magic edit modal (`e`) no longer writes the whole inline string into the title. It
@@ -21,8 +23,10 @@ what shipped rather than what was written down at the time.
 ### Changed
 
 - `d` moves the selected task to the next column of its project and writes the new
-  `status` and `columnId` to the backend, so the web UI moves the card too. The key follows a
-  configured `quick_actions` binding for `d` when one exists.
+  `status` and `columnId` to the backend, so the web UI moves the card too. It no longer toggles
+  a local done flag, which only existed in the TUI.
+- `d` follows a configured `quick_actions` binding for that key, and falls back to the column
+  cycle when no action claims it.
 
 ## [0.5.0] - 2026-10-19
 
@@ -146,7 +150,8 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/FacileStudio/opus-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/FacileStudio/opus-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FacileStudio/opus-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/FacileStudio/opus-cli/compare/v0.2.1...v0.3.0
