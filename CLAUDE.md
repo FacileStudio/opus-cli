@@ -10,7 +10,8 @@ CLI subcommands for tasks, workspaces, and personal API tokens.
 - HTTP: reqwest (JSON, multipart, blocking)
 - TUI: ratatui, crossterm, fuzzy-matcher
 - CLI parsing: clap (builder pattern)
-- Config: YAML (`~/.opus.yml`) via serde_yaml
+- Config: YAML (`~/.opus.yml` or `~/.config/opus/config.yml`) via serde_yaml
+- Cache: JSON session snapshot in the XDG cache directory (`~/.cache/opus`)
 - Date parsing: chrono, chrono-english, regex, aho-corasick
 
 ## Commands
@@ -29,7 +30,8 @@ cargo run -- token list  # list API tokens
 ```
 src/
   main.rs         CLI entry point, clap definition, subcommand handlers, TUI launcher
-  config.rs       Resolves ~/.opus.yml and the OPUS_* overrides (URL, token, workspace ID)
+  config.rs       Resolves the config file and the OPUS_* overrides (URL, token, workspace ID)
+  cache.rs        XDG session snapshot for instant TUI startup
   opus/
     models.rs     Domain models (Task, Workspace, Project, Key, User, Label)
     client.rs     Legacy helper client

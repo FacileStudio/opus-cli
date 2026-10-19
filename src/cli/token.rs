@@ -146,7 +146,9 @@ async fn handle_create(
         println!("{}", secret);
     }
     crate::ui::hint("Save this token now, it will not be shown again");
-    crate::ui::hint("Add it to ~/.opus.yml as api_key, or export OPUS_TOKEN");
+    crate::ui::hint(
+        "Add it to ~/.opus.yml or ~/.config/opus/config.yml as api_key, or export OPUS_TOKEN",
+    );
     Ok(())
 }
 

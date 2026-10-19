@@ -34,10 +34,6 @@ pub async fn handle_confirmation_dialog(
                         app.apply_task_filter();
                         app.show_confirmation_dialog = false;
                     }
-                    PendingAction::QuitApp => {
-                        app.quit();
-                        app.show_confirmation_dialog = false;
-                    }
                 }
             }
         },

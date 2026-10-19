@@ -78,6 +78,15 @@ pub async fn handle_workspace_picker(app: &mut App, key: &KeyEvent, api_client: 
 
                 app.apply_task_filter();
 
+                let snapshot = crate::cache::Snapshot::from_app(app);
+                let (base_url, workspace_id) = {
+                    let client = api_client.lock().await;
+                    (client.base_url().to_string(), client.workspace_id().to_string())
+                };
+                if let Err(e) = crate::cache::save(&base_url, &workspace_id, &snapshot) {
+                    app.add_debug_message(format!("Failed to save the session cache: {}", e));
+                }
+
                 app.config.workspace_id = Some(app.current_workspace_id.clone());
                 if let Err(e) = app.config.save() {
                     app.add_debug_message(format!("Failed to persist workspace to config: {}", e));

@@ -51,10 +51,6 @@ impl App {
                     self.execute_delete_task_async(task_id, client).await;
                     Some(tid)
                 }
-                PendingAction::QuitApp => {
-                    self.quit();
-                    None
-                }
             }
         } else {
             None
@@ -70,10 +66,6 @@ impl App {
                     let tid = task_id.clone();
                     self.execute_delete_task(task_id);
                     Some(tid)
-                }
-                PendingAction::QuitApp => {
-                    self.quit();
-                    None
                 }
             }
         } else {

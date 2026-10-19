@@ -26,7 +26,7 @@ Tasks are written in an inline "magic" syntax, such as `Review proposal +"Client
 | TUI | ratatui 0.26 (all widgets), crossterm 0.27, fuzzy-matcher 0.3 |
 | Transport | reqwest 0.12 (JSON, blocking, multipart), bearer token auth |
 | Parsing | regex 1.10, chrono 0.4, chrono-english 0.1, aho-corasick 1 |
-| Storage | `~/.opus.yml` via serde_yaml 0.9 |
+| Storage | YAML at `~/.opus.yml` or `$XDG_CONFIG_HOME/opus/config.yml`; JSON session cache at `$XDG_CACHE_HOME/opus` |
 
 ## Install
 
@@ -63,7 +63,8 @@ Full command reference, inline syntax and TUI keybindings: [docs/usage.md](docs/
 
 ## Configuration
 
-The CLI reads `~/.opus.yml`, or the file given to `--config`. The environment overrides it, so a
+The CLI reads `~/.opus.yml` or `$XDG_CONFIG_HOME/opus/config.yml` (usually
+`~/.config/opus/config.yml`), or the file given to `--config`. The environment overrides it, so a
 shell or a CI job can supply everything:
 
 ```yaml
@@ -96,7 +97,8 @@ reference: [docs/configuration.md](docs/configuration.md).
 ```
 src/
   main.rs         clap tree, config resolution, TUI bootstrap
-  config.rs       ~/.opus.yml model: layouts, columns, quick actions
+  config.rs       Config model: layouts, columns, quick actions
+  cache.rs        Session snapshot for instant TUI startup
   opus_parser.rs  the inline magic-syntax parser
   opus_client/    REST client split by resource: tasks, projects, tokens, labels, filters
   cli/            non-interactive subcommands (task, workspace, token) and printers

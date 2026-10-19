@@ -8,7 +8,7 @@ description: >
 # opus: Facile project management
 
 Binary: `opus`
-Config: `~/.opus.yml`
+Config: `~/.opus.yml` or `~/.config/opus/config.yml`
 
 ## When to apply
 
@@ -72,5 +72,5 @@ opus token revoke <id>         Revoke a personal API token
 - Prefer `--quick` for non-interactive task creation from agents
 - Use `--json` when parsing output programmatically
 - Run `opus -h` for exact syntax when unsure
-- The credential comes from `OPUS_TOKEN` (or `api_key` in `~/.opus.yml`); create one with
+- The credential comes from `OPUS_TOKEN` (or `api_key` in `~/.opus.yml` or `~/.config/opus/config.yml`); create one with
   `opus token create -n <name>`

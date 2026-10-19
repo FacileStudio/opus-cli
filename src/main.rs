@@ -9,6 +9,7 @@ mod opus_client;
 mod opus_parser;
 mod debug;
 mod config;
+mod cache;
 mod cli;
 
 mod ui_loop;
@@ -218,70 +219,116 @@ async fn tokio_main(
     let config_clone = config.clone();
     let app = Arc::new(Mutex::new(App::new_with_config(config.unwrap_or_default(), default_project.clone())));
 
-    {
-        let api_client_guard = api_client.lock().await;
-        match api_client_guard.test_connection().await {
-            Ok(true) => {
-                debug_log("SUCCESS: Connected to Opus API");
-            }
-            Ok(false) => {
-                debug_log("WARNING: Failed to connect to Opus API");
-                debug_log("The app requires a connection to the api.");
-            }
-            Err(e) => {
-                debug_log(&format!("WARNING: Failed to connect to Opus API: {}", e));
-                debug_log("The app requires a connection to the api.");
-            }
-        }
-    }
+    let (base_url, cache_workspace_id) = {
+        let client = api_client.lock().await;
+        (client.base_url().to_string(), client.workspace_id().to_string())
+    };
 
-    let client_clone = api_client.clone();
-
-    let workspaces = client_clone.lock().await.get_workspaces().await.unwrap_or_default();
-    debug_log(&format!("Fetched {} workspaces from API", workspaces.len()));
     {
         let mut app_guard = app.lock().await;
-        app_guard.set_available_workspaces(workspaces);
-    }
-
-    let (tasks, project_map, project_colors) = client_clone.lock().await.get_tasks_with_projects().await.unwrap_or_default();
-    debug_log(&format!("Fetched {} tasks from API", tasks.len()));
-    let all_labels = client_clone.lock().await.get_all_labels().await.unwrap_or_default();
-    debug_log(&format!("Fetched {} labels from API", all_labels.len()));
-    if let Some(first) = tasks.get(0) {
-        debug_log(&format!("First task: {:?}", first));
-    } else {
-        debug_log("No tasks returned from API");
-    }
-    let filters = client_clone.lock().await.get_saved_filters().await.unwrap_or_default();
-    debug_log(&format!("Fetched {} saved filters from backend", filters.len()));
-    {
-        let mut app_guard = app.lock().await;
-        app_guard.update_all_tasks(tasks);
-        app_guard.project_map = project_map;
-        app_guard.project_colors = project_colors;
-        app_guard.set_filters(filters);
-        for label in all_labels {
-            app_guard.label_map.insert(label.id.clone(), label.name.clone());
-            app_guard.label_colors.insert(label.id.clone(), label.color.clone());
+        if !cache_workspace_id.is_empty() {
+            app_guard.current_workspace_id = cache_workspace_id.clone();
         }
-
-        if let Some(ref config) = config_clone {
-            drop(app_guard);
-            let mut app_guard = app.lock().await;
-            app_guard.apply_default_filter_from_config(config, &client_clone).await;
+        if let Some(snapshot) = crate::cache::load(&base_url, &cache_workspace_id) {
+            snapshot.apply(&mut app_guard);
+            app_guard.add_debug_message(format!("Loaded the cached session for {}", base_url));
+            debug_log(&format!("Loaded {} cached tasks", app_guard.tasks.len()));
         }
-
-        let app_guard = app.lock().await;
-        debug_log(&format!("App all_tasks count: {}", app_guard.all_tasks.len()));
-        debug_log(&format!("App tasks count after filter: {}", app_guard.tasks.len()));
-        debug_log(&format!("App project_map: {:?}", app_guard.project_map));
-        debug_log(&format!("App filters: {:?}", app_guard.filters));
+        app_guard.refreshing = true;
     }
+
+    let app_refresh = app.clone();
+    let client_refresh = api_client.clone();
+    tokio::spawn(async move {
+        load_session(&app_refresh, &client_refresh, config_clone).await;
+    });
 
     debug_log("=== ABOUT TO CALL run_ui ===");
-    run_ui(app.clone(), client_clone.clone()).await?;
+    run_ui(app.clone(), api_client.clone()).await?;
     debug_log("=== run_ui RETURNED ===");
 
     Ok(())
+}
+
+async fn load_session(
+    app: &std::sync::Arc<tokio::sync::Mutex<crate::tui::app::state::App>>,
+    api_client: &std::sync::Arc<tokio::sync::Mutex<crate::opus_client::OpusClient>>,
+    config: Option<crate::config::OpusConfig>,
+) {
+    use crate::debug::debug_log;
+
+    let (base_url, workspace_id) = {
+        let client = api_client.lock().await;
+        (client.base_url().to_string(), client.workspace_id().to_string())
+    };
+
+    let workspaces = api_client.lock().await.get_workspaces().await;
+    let tasks = api_client.lock().await.get_tasks_with_projects().await;
+    let labels = api_client.lock().await.get_all_labels().await.ok();
+    let filters = api_client.lock().await.get_saved_filters().await.ok();
+
+    let (snapshot, tasks_loaded) = {
+        let mut app_guard = app.lock().await;
+        if app_guard.current_workspace_id != workspace_id {
+            return;
+        }
+
+        match workspaces {
+            Ok(workspaces) => app_guard.set_available_workspaces(workspaces),
+            Err(e) => debug_log(&format!("Failed to load workspaces: {}", e)),
+        }
+
+        let tasks_loaded = match tasks {
+            Ok((tasks, project_map, project_colors)) => {
+                app_guard.update_all_tasks(tasks);
+                app_guard.project_map = project_map;
+                app_guard.project_colors = project_colors;
+                true
+            }
+            Err(e) => {
+                debug_log(&format!("Failed to load tasks: {}", e));
+                false
+            }
+        };
+
+        if let Some(labels) = labels {
+            app_guard.label_map.clear();
+            app_guard.label_colors.clear();
+            for label in labels {
+                app_guard.label_map.insert(label.id.clone(), label.name.clone());
+                app_guard.label_colors.insert(label.id.clone(), label.color.clone());
+            }
+        }
+
+        if let Some(filters) = filters {
+            app_guard.set_filters(filters);
+        }
+
+        if !tasks_loaded {
+            let message = if app_guard.all_tasks.is_empty() {
+                "Could not reach Opus"
+            } else {
+                "Could not reach Opus, showing cached data"
+            };
+            app_guard.show_toast(message.to_string());
+        }
+
+        app_guard.refreshing = false;
+        (crate::cache::Snapshot::from_app(&app_guard), tasks_loaded)
+    };
+
+    if tasks_loaded {
+        if let Err(e) = crate::cache::save(&base_url, &workspace_id, &snapshot) {
+            debug_log(&format!("Failed to save the session cache: {}", e));
+        }
+    }
+
+    if let Some(config) = config {
+        if tasks_loaded {
+            let mut app_guard = app.lock().await;
+            if app_guard.current_workspace_id == workspace_id {
+                app_guard.apply_default_filter_from_config(&config, api_client).await;
+            }
+        }
+    }
 }

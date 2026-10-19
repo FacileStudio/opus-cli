@@ -15,7 +15,7 @@ With no command and no `--quick`, `opus` launches the TUI.
 
 | Flag | Value | What it does |
 |---|---|---|
-| `-c`, `--config <FILE>` | path | Read config from `FILE` instead of `~/.opus.yml` |
+| `-c`, `--config <FILE>` | path | Read config from `FILE` instead of `~/.opus.yml` or `~/.config/opus/config.yml` |
 | `--dev-env` | — | Run without requiring a config file, on localhost defaults |
 | `--quick <TASK_STRING>` | string | Create one task from inline syntax and exit |
 | `-w`, `--workspace <ID>` | string | Override the workspace ID for this run only |
@@ -33,8 +33,10 @@ throwaway localhost defaults.
 
 ## `opus`
 
-Launch the TUI. On startup it tests the connection, then loads workspaces, tasks with their
-project map, labels, saved filters and the configured `default_filter`.
+Launch the TUI. When a cached session exists for the API URL and workspace, it renders that
+immediately, then refreshes workspaces, tasks with their project map, labels, saved filters and
+the configured `default_filter` in the background. Without a cache it shows `Refreshing...` until
+the first load finishes.
 
 ```sh
 opus
@@ -168,9 +170,10 @@ opus workspace switch 01H8XK...
 ```
 
 Matches the argument against workspace ID, name or slug, case-insensitive for name and slug.
-On a match it writes `workspace_id` to `~/.opus.yml` and prints a confirmation. On no match it
-lists the available workspaces on stderr and exits 1. Under `--dev-env` there is no config
-object to persist to, so the switch prints its confirmation without saving.
+On a match it writes `workspace_id` to the config file it was loaded from (usually `~/.opus.yml`)
+and prints a confirmation. On no match it lists the available workspaces on stderr and exits 1.
+Under `--dev-env` there is no config object to persist to, so the switch prints its confirmation
+without saving.
 
 ## `opus token`
 
@@ -276,9 +279,7 @@ weekly.
 | `h` / `l` | Previous / next column layout |
 | `H` / `L` | Cycle the task filter (active, all, and so on) |
 | `Esc` | Close the open modal or dialog |
-| `q` | Quit with confirmation, or close the open modal |
-| `qq` | Quit immediately (two `q` within one second) |
-| `Q` | Quit immediately, no confirmation |
+| `q` / `Q` | Quit immediately |
 | `Ctrl-Z` | Undo the last local task edit |
 | `Ctrl-Y` | Redo |
 
@@ -291,7 +292,6 @@ weekly.
 | `E` | Edit the selected task in a form |
 | `d` | Toggle completion, synced to the API |
 | `D` | Delete, via the confirmation dialog |
-| `s` | Star / unstar |
 | `S` | Add a subtask under the selected task |
 | `c` | Comments on the selected task |
 
@@ -301,8 +301,11 @@ weekly.
 |---|---|
 | `p` | Project picker |
 | `f` | Filter picker |
-| `W` | Workspace picker |
+| `w` / `W` | Workspace picker |
 | `Space` | Quick-actions modal, driven by `quick_actions` in the config |
+
+With no `quick_actions` configured, the modal contains one default action: `d` cycles the
+selected task through the project's columns, wrapping from the last column to the first.
 
 Confirmation dialogs take `Enter` or `y` to confirm, `n` or `Esc` to cancel. The comments modal
 switches between the list and the selected comment with `Tab`, moves with `Up` / `Down`, and

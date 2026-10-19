@@ -11,8 +11,6 @@ use crate::tui::app::undoable_action::UndoableAction;
 use crate::tui::app::pending_action::PendingAction;
 use crate::tui::app::suggestion_mode::SuggestionMode;
 
-mod confirm_quit_ext;
-
 fn priority_to_num(p: &Priority) -> i32 {
     match p {
         Priority::NoPriority => 0,
@@ -137,9 +135,6 @@ pub struct App {
     pub current_workspace_id: String,
     pub current_workspace_name: Option<String>,
     pub available_workspaces: Vec<crate::opus::models::Workspace>,
-    // Quit handling
-    pub last_key_time: Option<DateTime<Local>>,
-    pub consecutive_q_count: usize,
 }
 
 #[allow(dead_code)]
@@ -275,8 +270,6 @@ impl App {
             current_workspace_id: initial_workspace_id,
             current_workspace_name: None,
             available_workspaces: Vec::new(),
-            last_key_time: None,
-            consecutive_q_count: 0,
         }
     }
 
@@ -286,35 +279,6 @@ impl App {
 
     // --- BEGIN FULL MOVED METHODS ---
     pub fn quit(&mut self) { self.running = false; }
-
-    /// Handle consecutive 'q' presses for double-q quit
-    pub fn handle_q_press(&mut self) {
-        let now = chrono::Local::now();
-
-        // If it's been more than 1 second since last 'q', reset the counter
-        if let Some(last_time) = self.last_key_time {
-            if now.signed_duration_since(last_time).num_seconds() > 1 {
-                self.consecutive_q_count = 0;
-            }
-        }
-
-        self.consecutive_q_count += 1;
-        self.last_key_time = Some(now);
-
-        if self.consecutive_q_count >= 2 {
-            // Double q pressed within 1 second - quit immediately
-            self.quit();
-        } else {
-            // First q - show confirmation dialog
-            self.confirm_quit();
-        }
-    }
-
-    /// Reset the consecutive 'q' counter when other keys are pressed
-    pub fn reset_q_counter(&mut self) {
-        self.consecutive_q_count = 0;
-        self.last_key_time = None;
-    }
     pub fn next_task(&mut self) { if !self.tasks.is_empty() { self.selected_task_index = (self.selected_task_index + 1) % self.tasks.len(); } }
     pub fn previous_task(&mut self) { if !self.tasks.is_empty() { self.selected_task_index = if self.selected_task_index == 0 { self.tasks.len() - 1 } else { self.selected_task_index - 1 }; } }
     pub fn get_selected_task(&self) -> Option<&Task> { self.tasks.get(self.selected_task_index) }

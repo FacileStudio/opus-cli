@@ -4,11 +4,19 @@ Every key the config file accepts and every environment variable the code actual
 
 ## The config file
 
-`~/.opus.yml` by default — `dirs::home_dir()` joined with `.opus.yml`. Override the path with
-`--config FILE` / `-c FILE` on any invocation. There is no `XDG_CONFIG_HOME` support.
+Two locations are read, in order:
 
-The CLI never creates this file on its own. `opus workspace switch` is the only command that
-writes to it, and it always writes to `~/.opus.yml` regardless of `--config`.
+1. `~/.opus.yml`, the original path (`dirs::home_dir()` joined with `.opus.yml`).
+2. `$XDG_CONFIG_HOME/opus/config.yml`, usually `~/.config/opus/config.yml`.
+   `XDG_CONFIG_HOME` is honoured, so a relocated config root works too.
+
+When both files exist, `~/.opus.yml` wins, so an existing setup keeps working after an upgrade.
+Override both with `--config FILE` / `-c FILE` on any invocation; an explicit path is used even
+when it does not exist, so the error names the file you asked for.
+
+Only a workspace switch writes the file: `opus workspace switch` and the TUI workspace picker
+save back to whichever file was loaded, or to `~/.opus.yml` when the session had no config file
+behind it.
 
 ```yaml
 api_url: "https://opus.facile.studio"
@@ -52,9 +60,13 @@ quick_actions:
     target: "bug"
 ```
 
-`action` is one of `project`, `priority`, `label`, `status` or `workspace`; `target` is the
-name to apply. `label` actions go through the label attachment endpoint, everything else
-through a full task update.
+`action` is one of `project`, `priority`, `label`, `status`, `workspace` or `cycle`; `target` is
+the name to apply and is ignored by `cycle`. `label` actions go through the label attachment
+endpoint, `cycle` moves the task to the next column in its project (wrapping from the last to the
+first), and everything else through a full task update.
+
+When `quick_actions` is missing or empty, the modal offers one built-in action: `d` cycles the
+selected task through the project's columns.
 
 ### Column layouts
 
@@ -63,6 +75,19 @@ through a full task update.
 `column_type` is one of `Title`, `Project`, `Labels`, `DueDate`, `StartDate`, `Priority`,
 `Status`, `Assignees`, `Created`, `Updated`. With none configured, four layouts ship built in:
 `default`, `minimal`, `project-focused` and `time-management`.
+
+## Session cache
+
+The TUI saves the data it loaded to `$XDG_CACHE_HOME/opus/<api>-<workspace>.json`, usually
+`~/.cache/opus/<api>-<workspace>.json`. The file name combines a slug of `api_url` and the
+workspace ID, so two instances or two workspaces never share an entry. It holds workspaces,
+tasks, project names and colors, labels and saved filters. It never holds the API token.
+
+On startup the TUI renders that snapshot immediately and refreshes from the API in the
+background. A manual refresh (`r`) and a workspace switch rewrite the matching entry. If the API
+cannot be reached, the cached view stays on screen instead of being replaced by an empty one. A
+cache file that cannot be parsed, or that was written by an older cache version, is ignored.
+Delete the directory to force a cold start.
 
 ## Environment variables
 
@@ -107,6 +132,7 @@ the file, and does not restrict its mode. On a shared machine, do it yourself:
 
 ```sh
 chmod 600 ~/.opus.yml
+chmod 600 ~/.config/opus/config.yml
 ```
 
 Better still, keep it out of the file: `export OPUS_TOKEN=...` from a secret store.
@@ -120,7 +146,8 @@ For a single run, values resolve as:
 1. An explicit flag, where one exists — `--config`, `-w` / `--workspace`.
 2. The environment variable, `OPUS_TOKEN` / `OPUS_API_URL` / `OPUS_WORKSPACE_ID` /
    `OPUS_DEFAULT_PROJECT`.
-3. The config file: `--config FILE` if given, else `~/.opus.yml`.
+3. The config file: `--config FILE` if given, else `~/.opus.yml` when it exists, else
+   `$XDG_CONFIG_HOME/opus/config.yml` (usually `~/.config/opus/config.yml`).
 4. The built-in default — `http://localhost:1337`, `Inbox`, an empty workspace ID.
 
 A missing config file is an error unless `--dev-env` is passed or a credential came from the
@@ -131,8 +158,8 @@ environment. A blank `api_key` with nothing in the environment exits 1 with a se
 
 | Symptom | Cause |
 |---|---|
-| `no config found — create ~/.opus.yml, or set OPUS_TOKEN` | No `~/.opus.yml`, no `--dev-env`, no credential in the environment |
+| `no config found — create ~/.opus.yml (or ~/.config/opus/config.yml), or set OPUS_TOKEN` | No config file in either location, no `--dev-env`, no credential in the environment |
 | `config file not found at <path>` | `--config` pointed at a missing file |
-| `no API token configured — create one with \`opus token create\`, set OPUS_TOKEN, or put api_key in ~/.opus.yml` | Nothing supplied a credential |
+| `no API token configured — create one with \`opus token create\`, set OPUS_TOKEN, or put api_key in ~/.opus.yml or ~/.config/opus/config.yml` | Nothing supplied a credential |
 | `GET /api/auth/api-tokens failed (401 Unauthorized)` | The token is wrong or has been revoked |
 | `default project '<name>' not found` | `default_project` does not exist in the workspace |

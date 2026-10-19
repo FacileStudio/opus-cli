@@ -363,9 +363,7 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
         .border_style(Style::default().fg(Color::Cyan));
     let mut help_lines = vec![
         Line::from(vec![Span::styled("?", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Show this help")]),
-        Line::from(vec![Span::styled("q", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Quit (with confirmation) / Close modal")]),
-        Line::from(vec![Span::styled("qq", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Quick quit (double q within 1 second)")]),
-        Line::from(vec![Span::styled("Q", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Immediate quit (no confirmation)")]),
+        Line::from(vec![Span::styled("q / Q", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Quit")]),
         Line::from(vec![Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Close modal/help")]),
         Line::from(vec![Span::styled("j / k", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Move selection down/up")]),
         Line::from(vec![Span::styled("Up / Down", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Move selection up/down")]),
@@ -377,10 +375,10 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
         Line::from(vec![Span::styled("E", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Edit task (form mode)")]),
         Line::from(vec![Span::styled("f", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Show filter picker")]),
         Line::from(vec![Span::styled("p", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Project picker")]),
+        Line::from(vec![Span::styled("w / W", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Workspace picker")]),
         Line::from(vec![Span::styled("o", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Open URLs from selected task")]),
         Line::from(vec![Span::styled("S", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Add subtask to selected task")]),
         Line::from(vec![Span::styled("r", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Refresh tasks/projects/filters")]),
-        Line::from(vec![Span::styled("s", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Star/unstar task")]),
         Line::from(vec![Span::styled("i", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Toggle info pane")]),
         Line::from(vec![Span::styled("x", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Toggle debug pane")]),
         Line::from(vec![Span::styled("h / l", Style::default().add_modifier(Modifier::BOLD)), Span::raw(": Switch layouts backward/forward")]),
@@ -390,24 +388,19 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
     ];
 
     // Quick actions section
-    if let Some(ref quick_actions) = app.config.quick_actions {
-        if !quick_actions.is_empty() {
-            help_lines.push(Line::raw("─ Quick Actions (Space for modal) ─"));
-            for action in quick_actions {
-                help_lines.push(Line::from(vec![
-                    Span::styled(format!("{}", action.key), Style::default().add_modifier(Modifier::BOLD)),
-                    Span::raw(format!(": {}", action.get_description()))
-                ]));
-            }
-            help_lines.push(Line::raw(""));
-        }
+    let quick_actions = app.config.available_quick_actions();
+    help_lines.push(Line::raw("─ Quick Actions (Space for modal) ─"));
+    for action in &quick_actions {
+        help_lines.push(Line::from(vec![
+            Span::styled(format!("{}", action.key), Style::default().add_modifier(Modifier::BOLD)),
+            Span::raw(format!(": {}", action.get_description()))
+        ]));
     }
+    help_lines.push(Line::raw(""));
 
     // Config details section
     help_lines.push(Line::raw("─ Config Details ─"));
-    // Show config file path (XDG or default)
-    let config_path = format!("{}/.opus.yml", std::env::var("HOME").unwrap_or("~".to_string()));
-    help_lines.push(Line::raw(format!("Config file: {}", config_path)));
+    help_lines.push(Line::raw(format!("Config file: {}", app.config.display_path())));
     help_lines.push(Line::raw(format!("API URL: {}", app.config.api_url)));
     if let Some(ref key) = app.config.api_key {
         let key: &str = key;
@@ -462,8 +455,8 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
     let area = f.size();
 
     // Calculate modal size based on number of quick actions
-    let quick_actions = app.config.quick_actions.as_ref();
-    let num_actions = quick_actions.map(|qa| qa.len()).unwrap_or(0);
+    let quick_actions = app.config.available_quick_actions();
+    let num_actions = quick_actions.len();
 
     // Base height for borders, title, and instructions
     let base_height = 5;
@@ -480,83 +473,59 @@ pub fn draw_quick_actions_modal(f: &mut Frame, app: &App) {
 
     let mut lines = vec![];
 
-    if let Some(ref quick_actions) = quick_actions {
-        if quick_actions.is_empty() {
-            lines.push(Line::from(vec![
-                Span::styled("No quick actions configured.", Style::default().fg(Color::Gray))
-            ]));
-            lines.push(Line::raw(""));
-            lines.push(Line::from(vec![
-                Span::raw("Add quick actions to your "),
-                Span::styled("config.yaml", Style::default().fg(Color::Yellow)),
-                Span::raw(" file.")
-            ]));
+    lines.push(Line::from(vec![
+        Span::styled("Available Quick Actions:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+    ]));
+    lines.push(Line::raw(""));
+
+    for (i, action) in quick_actions.iter().enumerate() {
+        let is_selected = i == app.selected_quick_action_index;
+        let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
+
+        let key_style = if is_selected {
+            sel
         } else {
-            lines.push(Line::from(vec![
-                Span::styled("Available Quick Actions:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
-            ]));
-            lines.push(Line::raw(""));
+            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+        };
 
-            for (i, action) in quick_actions.iter().enumerate() {
-                let is_selected = i == app.selected_quick_action_index;
-                let sel = Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD);
+        let mut description_spans = vec![
+            Span::styled(format!(" {} ", action.key), key_style),
+            Span::raw(" "),
+        ];
 
-                let key_style = if is_selected {
-                    sel
-                } else {
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-                };
-
-                let mut description_spans = vec![
-                    Span::styled(format!(" {} ", action.key), key_style),
-                    Span::raw(" "),
-                ];
-
-                if is_selected {
-                    description_spans.push(Span::styled(action.get_description(), sel));
-                } else {
-                    match action.action.as_str() {
-                        "project" => {
-                            description_spans.push(Span::styled("Move to project: ", Style::default().fg(Color::White)));
-                            let project_color = get_project_color(&action.target, app);
-                            description_spans.push(Span::styled(&action.target, Style::default().fg(project_color)));
-                        },
-                        "label" => {
-                            description_spans.push(Span::styled("Add label: ", Style::default().fg(Color::White)));
-                            let label_color = get_label_color(&action.target, app);
-                            description_spans.push(Span::styled(&action.target, Style::default().fg(label_color)));
-                        },
-                        "priority" => {
-                            description_spans.push(Span::styled("Set priority to: ", Style::default().fg(Color::White)));
-                            let priority_color = match action.target.as_str() {
-                                "1" => Color::Green,
-                                "2" => Color::Yellow,
-                                "3" => Color::Cyan,
-                                "4" => Color::Magenta,
-                                "5" => Color::Red,
-                                _ => Color::White,
-                            };
-                            description_spans.push(Span::styled(&action.target, Style::default().fg(priority_color)));
-                        },
-                        _ => {
-                            description_spans.push(Span::styled(action.get_description(), Style::default().fg(Color::White)));
-                        }
-                    }
+        if is_selected {
+            description_spans.push(Span::styled(action.get_description(), sel));
+        } else {
+            match action.action.as_str() {
+                "project" => {
+                    description_spans.push(Span::styled("Move to project: ", Style::default().fg(Color::White)));
+                    let project_color = get_project_color(&action.target, app);
+                    description_spans.push(Span::styled(&action.target, Style::default().fg(project_color)));
+                },
+                "label" => {
+                    description_spans.push(Span::styled("Add label: ", Style::default().fg(Color::White)));
+                    let label_color = get_label_color(&action.target, app);
+                    description_spans.push(Span::styled(&action.target, Style::default().fg(label_color)));
+                },
+                "priority" => {
+                    description_spans.push(Span::styled("Set priority to: ", Style::default().fg(Color::White)));
+                    let priority_color = match action.target.as_str() {
+                        "1" => Color::Green,
+                        "2" => Color::Yellow,
+                        "3" => Color::Cyan,
+                        "4" => Color::Magenta,
+                        "5" => Color::Red,
+                        _ => Color::White,
+                    };
+                    description_spans.push(Span::styled(&action.target, Style::default().fg(priority_color)));
+                },
+                _ => {
+                    description_spans.push(Span::styled(action.get_description(), Style::default().fg(Color::White)));
                 }
-
-                lines.push(Line::from(description_spans));
             }
         }
-    } else {
-        lines.push(Line::from(vec![
-            Span::styled("No quick actions configured.", Style::default().fg(Color::Gray))
-        ]));
-        lines.push(Line::raw(""));
-        lines.push(Line::from(vec![
-            Span::raw("Add quick actions to your "),
-            Span::styled("config.yaml", Style::default().fg(Color::Yellow)),
-            Span::raw(" file.")
-        ]));
+
+        lines.push(Line::from(description_spans));
     }
 
     lines.push(Line::raw(""));

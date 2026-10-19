@@ -20,8 +20,8 @@ cd opus-cli
 cargo build
 ```
 
-Then either write `~/.opus.yml` (see [configuration.md](configuration.md)) or work against
-environment variables:
+Then either write `~/.opus.yml` or `~/.config/opus/config.yml` (see
+[configuration.md](configuration.md)) or work against environment variables:
 
 ```sh
 cp .env.example .env

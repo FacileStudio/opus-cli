@@ -334,6 +334,17 @@ impl super::OpusClient {
         self.update_task(task_id, &update).await
     }
 
+    pub async fn cycle_task_status(
+        &self,
+        task_id: &str,
+        current_status: &str,
+        columns: &[Column],
+    ) -> Result<Task, Box<dyn Error + Send + Sync>> {
+        let next =
+            next_column(columns, current_status).ok_or("No columns found for this project")?;
+        self.set_task_status(task_id, &next.slug).await
+    }
+
     pub async fn toggle_task_status(
         &self,
         task_id: &str,
@@ -702,5 +713,57 @@ impl super::OpusClient {
             return Ok(label);
         }
         self.create_label(label_name, "#808080").await
+    }
+}
+
+pub fn next_column<'a>(columns: &'a [Column], current_status: &str) -> Option<&'a Column> {
+    let mut ordered: Vec<&Column> = columns.iter().collect();
+    ordered.sort_by_key(|column| column.position);
+    let next_index = ordered
+        .iter()
+        .position(|column| column.slug == current_status)
+        .map(|index| (index + 1) % ordered.len())
+        .unwrap_or(0);
+    ordered.get(next_index).copied()
+}
+
+#[cfg(test)]
+mod column_tests {
+    use super::*;
+
+    fn column(slug: &str, position: i32, is_final: bool) -> Column {
+        let now = Utc::now();
+        Column {
+            id: slug.to_string(),
+            project_id: "p1".to_string(),
+            name: slug.to_string(),
+            slug: slug.to_string(),
+            position,
+            icon: None,
+            color: None,
+            is_final,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[test]
+    fn cycling_follows_the_column_position_order() {
+        let columns = vec![
+            column("done", 2, true),
+            column("todo", 0, false),
+            column("doing", 1, false),
+        ];
+
+        assert_eq!(next_column(&columns, "todo").unwrap().slug, "doing");
+        assert_eq!(next_column(&columns, "doing").unwrap().slug, "done");
+        assert_eq!(next_column(&columns, "done").unwrap().slug, "todo");
+    }
+
+    #[test]
+    fn an_unknown_status_starts_at_the_first_column() {
+        let columns = vec![column("todo", 0, false), column("done", 1, true)];
+        assert_eq!(next_column(&columns, "missing").unwrap().slug, "todo");
+        assert!(next_column(&[], "todo").is_none());
     }
 }

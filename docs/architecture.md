@@ -6,7 +6,8 @@ the inline parser, and the shape of the TUI event loop.
 ## Topology
 
 ```
-         OPUS_TOKEN / OPUS_API_URL / ...   ~/.opus.yml  (or --config FILE)
+         OPUS_TOKEN / OPUS_API_URL / ...   ~/.opus.yml or ~/.config/opus/config.yml
+                                            (or --config FILE)
                           │                    │
                           └────────┬───────────┘
                                    ▼

@@ -39,7 +39,7 @@ impl Settings {
         if config.is_none() && !dev_env && env_token().is_none() {
             return Err(match config_path {
                 Some(path) => format!("config file not found at {}", path),
-                None => "no config found — create ~/.opus.yml, or set OPUS_TOKEN".to_string(),
+                None => "no config found — create ~/.opus.yml (or ~/.config/opus/config.yml), or set OPUS_TOKEN".to_string(),
             });
         }
 
@@ -53,7 +53,7 @@ impl Settings {
             .or_else(|| dev_env.then(|| "demo-token".to_string()))
             .ok_or_else(|| {
                 "no API token configured — create one with `opus token create`, set \
-                 OPUS_TOKEN, or put api_key in ~/.opus.yml"
+                 OPUS_TOKEN, or put api_key in ~/.opus.yml or ~/.config/opus/config.yml"
                     .to_string()
             })?;
 
@@ -81,6 +81,21 @@ impl Settings {
     }
 }
 
+/// Resolves an XDG base directory from its environment variable, falling back
+/// to the conventional home-relative path when it is unset or blank. The
+/// fallback is spelled out rather than taken from `dirs` so the same
+/// `$XDG_*/opus` location is used on every platform the CLI ships for.
+pub(crate) fn xdg_dir(variable: &str, fallback: &str) -> Option<PathBuf> {
+    if let Some(value) = std::env::var_os(variable) {
+        if !value.is_empty() {
+            return Some(PathBuf::from(value));
+        }
+    }
+    let mut home = dirs::home_dir()?;
+    home.push(fallback);
+    Some(home)
+}
+
 fn env_token() -> Option<String> {
     TOKEN_VARS.iter().find_map(|name| env_value(name))
 }
@@ -100,8 +115,17 @@ pub struct QuickAction {
 }
 
 impl QuickAction {
+    pub fn cycle_status() -> Self {
+        QuickAction {
+            key: "d".to_string(),
+            action: "cycle".to_string(),
+            target: "status".to_string(),
+        }
+    }
+
     pub fn get_description(&self) -> String {
         match self.action.as_str() {
+            "cycle" => "Cycle status through project columns".to_string(),
             "project" => format!("Move to project: {}", self.target),
             "priority" => format!("Set priority to: {}", self.target),
             "label" => format!("Add label: {}", self.target),
@@ -125,6 +149,8 @@ pub struct OpusConfig {
     pub active_layout: Option<String>,
     pub refresh_interval_seconds: Option<u64>,
     pub auto_refresh: Option<bool>,
+    #[serde(skip)]
+    source_path: Option<PathBuf>,
 }
 
 impl Default for OpusConfig {
@@ -141,6 +167,7 @@ impl Default for OpusConfig {
             active_layout: None,
             refresh_interval_seconds: Some(300),
             auto_refresh: Some(true),
+            source_path: None,
         }
     }
 }
@@ -157,20 +184,59 @@ impl OpusConfig {
         Some(home)
     }
 
+    pub fn xdg_path() -> Option<PathBuf> {
+        let mut dir = xdg_dir("XDG_CONFIG_HOME", ".config")?;
+        dir.push("opus");
+        dir.push("config.yml");
+        Some(dir)
+    }
+
+    fn candidate_paths() -> Vec<PathBuf> {
+        [Self::default_path(), Self::xdg_path()]
+            .into_iter()
+            .flatten()
+            .collect()
+    }
+
+    fn resolve_from(custom_path: Option<&str>, candidates: Vec<PathBuf>) -> Option<PathBuf> {
+        if let Some(custom_path) = custom_path {
+            return Some(PathBuf::from(custom_path));
+        }
+        candidates
+            .iter()
+            .find(|candidate| candidate.is_file())
+            .cloned()
+            .or_else(|| candidates.into_iter().next())
+    }
+
+    pub fn resolve_path(custom_path: Option<&str>) -> Option<PathBuf> {
+        Self::resolve_from(custom_path, Self::candidate_paths())
+    }
+
     pub fn load_from_path(custom_path: Option<&str>) -> Option<Self> {
-        let config_path = match custom_path {
-            Some(custom_path) => PathBuf::from(custom_path),
-            None => Self::default_path()?,
-        };
+        let config_path = Self::resolve_path(custom_path)?;
 
         let contents = fs::read_to_string(&config_path).ok()?;
         let _ = ensure_secure_permissions(&config_path);
-        serde_yaml::from_str(&contents).ok()
+        let mut config: Self = serde_yaml::from_str(&contents).ok()?;
+        config.source_path = Some(config_path);
+        Some(config)
+    }
+
+    pub fn display_path(&self) -> String {
+        self.source_path
+            .clone()
+            .or_else(Self::default_path)
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "~/.opus.yml".to_string())
     }
 
     pub fn save(&self) -> Result<(), String> {
-        let config_path =
-            Self::default_path().ok_or_else(|| "Cannot determine home directory".to_string())?;
+        let config_path = self
+            .source_path
+            .clone()
+            .or_else(Self::default_path)
+            .ok_or_else(|| "Cannot determine config path".to_string())?;
         let yaml = serde_yaml::to_string(self)
             .map_err(|e| format!("Failed to serialize config: {}", e))?;
         write_private(&config_path, yaml.as_bytes())
@@ -194,6 +260,13 @@ impl OpusConfig {
     }
 
     #[allow(dead_code)]
+    pub fn available_quick_actions(&self) -> Vec<QuickAction> {
+        match &self.quick_actions {
+            Some(actions) if !actions.is_empty() => actions.clone(),
+            _ => vec![QuickAction::cycle_status()],
+        }
+    }
+
     pub fn get_quick_actions_map(&self) -> HashMap<String, QuickAction> {
         self.quick_actions
             .as_ref()
@@ -305,7 +378,7 @@ impl OpusConfig {
 /// Creates or replaces `path` with mode 0600, so the API key it holds is never
 /// world-readable — not even for the instant between `write` and `chmod`.
 #[cfg(unix)]
-fn write_private(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+pub(crate) fn write_private(path: &Path, contents: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
@@ -321,7 +394,7 @@ fn write_private(path: &Path, contents: &[u8]) -> std::io::Result<()> {
 }
 
 #[cfg(not(unix))]
-fn write_private(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+pub(crate) fn write_private(path: &Path, contents: &[u8]) -> std::io::Result<()> {
     fs::write(path, contents)
 }
 
@@ -633,6 +706,85 @@ pub struct ColumnSort {
 pub enum SortDirection {
     Asc,
     Desc,
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let mut path = std::env::temp_dir();
+        path.push(format!("opus-cli-paths-{}-{}", std::process::id(), name));
+        path
+    }
+
+    fn write_yaml(path: &Path, workspace_id: &str) {
+        fs::write(
+            path,
+            format!(
+                "api_url: http://localhost:1337\napi_key: token\nworkspace_id: {workspace_id}\n"
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn the_home_config_wins_when_both_paths_exist() {
+        let home = scratch("home.yml");
+        let xdg = scratch("xdg.yml");
+        write_yaml(&home, "home");
+        write_yaml(&xdg, "xdg");
+
+        let resolved = OpusConfig::resolve_from(None, vec![home.clone(), xdg.clone()]);
+        assert_eq!(resolved.as_deref(), Some(home.as_path()));
+
+        let _ = fs::remove_file(&home);
+        let _ = fs::remove_file(&xdg);
+    }
+
+    #[test]
+    fn the_xdg_config_is_used_when_the_home_config_is_absent() {
+        let home = scratch("absent.yml");
+        let xdg = scratch("present.yml");
+        let _ = fs::remove_file(&home);
+        write_yaml(&xdg, "xdg");
+
+        let resolved = OpusConfig::resolve_from(None, vec![home.clone(), xdg.clone()]);
+        assert_eq!(resolved.as_deref(), Some(xdg.as_path()));
+
+        let _ = fs::remove_file(&xdg);
+    }
+
+    #[test]
+    fn a_loaded_config_saves_back_to_its_source_path() {
+        let path = scratch("roundtrip.yml");
+        write_yaml(&path, "before");
+
+        let mut config = OpusConfig::load_from_path(Some(path.to_str().unwrap())).unwrap();
+        assert_eq!(config.display_path(), path.display().to_string());
+        config.workspace_id = Some("after".to_string());
+        config.save().unwrap();
+
+        let reread = OpusConfig::load_from_path(Some(path.to_str().unwrap())).unwrap();
+        assert_eq!(reread.workspace_id.as_deref(), Some("after"));
+
+        let _ = fs::remove_file(&path);
+    }
+}
+
+#[cfg(test)]
+mod quick_action_tests {
+    use super::*;
+
+    #[test]
+    fn the_modal_has_a_cycle_action_when_none_are_configured() {
+        let config = OpusConfig::default();
+        let actions = config.available_quick_actions();
+
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].key, "d");
+        assert_eq!(actions[0].action, "cycle");
+    }
 }
 
 #[cfg(all(test, unix))]

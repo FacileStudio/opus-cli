@@ -4,6 +4,7 @@ pub mod opus;
 pub mod tui;
 pub mod debug;
 pub mod config;
+pub mod cache;
 pub mod cli;
 pub mod ui;
 

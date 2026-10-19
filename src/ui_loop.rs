@@ -150,37 +150,31 @@ pub async fn run_ui(
                             app_guard.hide_quick_actions_modal();
                         }
                         KeyCode::Up => {
-                            if let Some(ref quick_actions) = app_guard.config.quick_actions {
-                                if !quick_actions.is_empty() && app_guard.selected_quick_action_index as usize > 0 {
-                                    app_guard.selected_quick_action_index -= 1;
-                                }
+                            if app_guard.selected_quick_action_index as usize > 0 {
+                                app_guard.selected_quick_action_index -= 1;
                             }
                         }
                         KeyCode::Down => {
-                            if let Some(ref quick_actions) = app_guard.config.quick_actions {
-                                if !quick_actions.is_empty() && (app_guard.selected_quick_action_index as usize + 1) < quick_actions.len() {
-                                    app_guard.selected_quick_action_index += 1;
-                                }
+                            let actions = app_guard.config.available_quick_actions();
+                            if (app_guard.selected_quick_action_index as usize + 1) < actions.len() {
+                                app_guard.selected_quick_action_index += 1;
                             }
                         }
                         KeyCode::Enter => {
-                            if let Some(ref quick_actions) = app_guard.config.quick_actions {
-                                if (app_guard.selected_quick_action_index as usize) < quick_actions.len() {
-                                    let action = quick_actions[app_guard.selected_quick_action_index as usize].clone();
-                                    app_guard.hide_quick_actions_modal();
-                                    apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await;
-                                }
+                            let actions = app_guard.config.available_quick_actions();
+                            if let Some(action) = actions.get(app_guard.selected_quick_action_index as usize).cloned() {
+                                app_guard.hide_quick_actions_modal();
+                                apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await;
                             }
                         }
                         KeyCode::Char(c) => {
                             // Direct character-based quick actions
-                            if let Some(ref quick_actions) = app_guard.config.quick_actions {
-                                if let Some((idx, action)) = quick_actions.iter().enumerate().find(|(_, a)| a.key == c.to_string()) {
-                                    let action = action.clone();
-                                    app_guard.hide_quick_actions_modal();
-                                    app_guard.selected_quick_action_index = idx;
-                                    apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await;
-                                }
+                            let actions = app_guard.config.available_quick_actions();
+                            if let Some((idx, action)) = actions.iter().enumerate().find(|(_, a)| a.key == c.to_string()) {
+                                let action = action.clone();
+                                app_guard.hide_quick_actions_modal();
+                                app_guard.selected_quick_action_index = idx;
+                                apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await;
                             }
                         }
                         _ => {}
@@ -394,10 +388,6 @@ pub async fn run_ui(
                     continue;
                 }
 
-                // handle async star toggle
-                if key.code == KeyCode::Char('s') {
-                    continue;
-                }
                 // handle async task completion toggle
                 if key.code == KeyCode::Char('d') {
                     drop(app_guard);
@@ -479,11 +469,6 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
     use crate::tui::modals::utils::try_show_modal;
     use KeyCode::*;
 
-    // Reset consecutive 'q' counter for any key other than 'q'
-    if !matches!(key.code, KeyCode::Char('q')) {
-        app.reset_q_counter();
-    }
-
     match key.code {
         KeyCode::Up => {
             app.previous_task();
@@ -499,12 +484,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
             try_show_modal(app, terminal, |app| app.show_help_modal());
             true
         }
-        Char('q') => {
-            app.handle_q_press();
-            true
-        }
-        Char('Q') => {
-            // Capital Q quits immediately without confirmation
+        Char('q') | Char('Q') => {
             app.quit();
             true
         }
@@ -548,7 +528,7 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
             try_show_modal(app, terminal, |app| app.show_filter_picker());
             true
         }
-        Char('W') => {
+        Char('w') | Char('W') => {
             try_show_modal(app, terminal, |app| app.show_workspace_picker());
             true
         }
@@ -566,10 +546,6 @@ fn dispatch_key(app: &mut App, key: KeyEvent, terminal: &Terminal<CrosstermBacke
         }
         Char('h') => {
             app.switch_to_previous_layout();
-            true
-        }
-        Char('s') => {
-            /* async star toggle handled in event loop */
             true
         }
         Enter => true,
@@ -649,6 +625,11 @@ async fn refresh_from_api(
                 app.apply_task_filter();
                 app.show_toast("Refreshed!".to_string());
             }
+
+            let snapshot = crate::cache::Snapshot::from_app(app);
+            if let Err(e) = crate::cache::save(client.base_url(), client.workspace_id(), &snapshot) {
+                app.add_debug_message(format!("Failed to save the session cache: {}", e));
+            }
         }
         Err(e) => {
             app.show_toast(format!("Refresh failed: {}", e));
@@ -658,11 +639,56 @@ async fn refresh_from_api(
 }
 
 /// Apply quick action and sync with API (extracted from old main.rs)
+async fn cycle_task_status_and_sync(
+    app: &mut App,
+    client_clone: &Arc<Mutex<OpusClient>>,
+) {
+    let Some(task) = app.get_selected_task() else {
+        app.show_toast("Select a task first".to_string());
+        return;
+    };
+    let task_id = task.id.clone();
+    let project_id = task.project_id.clone();
+    let current_status = task.status.clone();
+
+    let client = client_clone.lock().await;
+    let columns = client.get_columns_for_project(&project_id).await.unwrap_or_default();
+    let Some(next) = crate::opus_client::tasks::next_column(&columns, &current_status) else {
+        app.show_toast("No columns found for this project".to_string());
+        return;
+    };
+    let next_slug = next.slug.clone();
+    let next_name = next.name.clone();
+    let next_is_final = next.is_final;
+
+    match client.cycle_task_status(&task_id, &current_status, &columns).await {
+        Ok(_) => {
+            for list in [&mut app.tasks, &mut app.all_tasks] {
+                if let Some(task) = list.iter_mut().find(|task| task.id == task_id) {
+                    task.status = next_slug.clone();
+                    task.done = next_is_final;
+                }
+            }
+            app.add_debug_message(format!("Task {} moved to {}", task_id, next_slug));
+            app.show_toast(format!("Status: {}", next_name));
+        }
+        Err(e) => {
+            app.add_debug_message(format!("Failed to change task status: {}", e));
+            app.show_toast(format!("Status update failed: {}", e));
+        }
+    }
+}
+
 async fn apply_quick_action_and_sync(
     app: &mut App,
     action: crate::config::QuickAction,
     client_clone: &Arc<Mutex<OpusClient>>,
 ) {
+    if action.action == "cycle" {
+        cycle_task_status_and_sync(app, client_clone).await;
+        return;
+    }
+
     match app.apply_quick_action(&action) {
         Ok(_) => {
             app.add_debug_message(format!("Quick action applied: {} -> {}", action.key, action.target));
