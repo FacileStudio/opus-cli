@@ -10,6 +10,12 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-27
+
+### Added
+
+- `OPUS_SERVER_URL` environment variable support alongside `OPUS_API_URL` for suite harmonization.
+
 ## [0.6.0] - 2026-10-19
 
 ### Fixed
@@ -150,7 +156,8 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/FacileStudio/opus-cli/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FacileStudio/opus-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/FacileStudio/opus-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FacileStudio/opus-cli/compare/v0.3.0...v0.4.0

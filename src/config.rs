@@ -58,6 +58,7 @@ impl Settings {
             })?;
 
         let api_url = env_value("OPUS_API_URL")
+            .or_else(|| env_value("OPUS_SERVER_URL"))
             .or_else(|| config.as_ref().map(|cfg| cfg.api_url.clone()))
             .unwrap_or_else(|| "http://localhost:1337".to_string());
 
