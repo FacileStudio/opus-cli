@@ -230,7 +230,7 @@ impl QuickAddParser {
         task
     }
 
-    fn parse_date(&self, text: &str) -> Option<DateTime<Utc>> {
+    pub fn parse_date(&self, text: &str) -> Option<DateTime<Utc>> {
         let text_lower = text.to_lowercase();
         let now = Local::now();
 

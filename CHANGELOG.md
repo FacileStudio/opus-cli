@@ -10,6 +10,24 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-30
+
+### Added
+
+- `opus task update <id>` edits a task. Flags: `--title`, `--description`, `--status`,
+  `--priority`, `--project` (moves the task), `--start`, `--due`, `--assignee`, `--add-label`
+  and `--remove-label`. Fields not passed stay untouched. `none` clears a date or the
+  assignee, and an empty `--description` clears the description.
+- `opus task add` takes `--description`, `--status`, `--priority`, `--project`, `--start`,
+  `--due`, `--assignee` and a repeatable `--label`. Flags override the quick-add text.
+
+### Changed
+
+- `opus task show --json` prints every field the API returns, including `actorId`,
+  `actorName`, `actorImage`, `workspaceId`, `subtaskTotal`, `subtaskDone`, and null `startDate`
+  and `dueDate` instead of omitting them.
+- `opus task show` prints the assignee name.
+
 ## [0.6.1] - 2026-10-27
 
 ### Added

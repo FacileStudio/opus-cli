@@ -4,7 +4,7 @@ use clap::{Arg, ArgAction, Command};
 
 use crate::opus_client::OpusClient;
 
-use super::output;
+use super::{output, task_write};
 
 pub fn subcommand() -> Command {
     Command::new("task")
@@ -60,16 +60,8 @@ pub fn subcommand() -> Command {
                 .args(output::output_args())
                 .arg(Arg::new("id").required(true).help("Task ID")),
         )
-        .subcommand(
-            Command::new("add")
-                .about("Create a new task")
-                .args(output::output_args())
-                .arg(
-                    Arg::new("text")
-                        .required(true)
-                        .help("Task text (supports +project *label !priority due:date syntax)"),
-                ),
-        )
+        .subcommand(task_write::add_command())
+        .subcommand(task_write::update_command())
         .subcommand(
             Command::new("done")
                 .about("Mark one or more tasks as done")
@@ -110,7 +102,8 @@ pub async fn handle(
     match matches.subcommand() {
         Some(("list", sub)) => handle_list(client, sub).await,
         Some(("show", sub)) => handle_show(client, sub).await,
-        Some(("add", sub)) => handle_add(client, sub, default_project).await,
+        Some(("add", sub)) => task_write::handle_add(client, sub, default_project).await,
+        Some(("update", sub)) => task_write::handle_update(client, sub).await,
         Some(("done", sub)) => handle_set_status(client, sub, "done").await,
         Some(("undone", sub)) => handle_set_status(client, sub, "to-do").await,
         Some(("delete", sub)) => handle_delete(client, sub).await,
@@ -209,29 +202,6 @@ async fn handle_show(
         .collect();
 
     output::print_task_detail(&task, &comments, &mode, &project_map);
-    Ok(())
-}
-
-async fn handle_add(
-    client: &OpusClient,
-    args: &clap::ArgMatches,
-    default_project: &str,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mode = output::output_mode_from_args(args);
-    let text = args.get_one::<String>("text").unwrap();
-
-    let default_project_id = client
-        .find_or_get_project_id(default_project)
-        .await?
-        .ok_or_else(|| {
-            format!("default project '{}' not found", default_project)
-        })?;
-
-    let task = client
-        .create_task_with_magic(text, &default_project_id)
-        .await?;
-
-    output::print_created_task(&task, &mode);
     Ok(())
 }
 

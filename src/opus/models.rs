@@ -254,17 +254,21 @@ pub struct Task {
     pub number: i32,
     #[serde(default, deserialize_with = "deserialize_optional_id")]
     pub user_id: Option<String>,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_optional_datetime",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
+    pub actor_id: Option<String>,
+    #[serde(default)]
+    pub actor_name: Option<String>,
+    #[serde(default)]
+    pub actor_image: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_id")]
+    pub workspace_id: Option<String>,
+    #[serde(default)]
+    pub subtask_total: i32,
+    #[serde(default)]
+    pub subtask_done: i32,
+    #[serde(default, deserialize_with = "deserialize_optional_datetime")]
     pub start_date: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_optional_datetime",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, deserialize_with = "deserialize_optional_datetime")]
     pub due_date: Option<DateTime<Utc>>,
     #[serde(
         default = "default_now",
@@ -345,6 +349,12 @@ impl Default for Task {
             position: 0,
             number: 0,
             user_id: None,
+            actor_id: None,
+            actor_name: None,
+            actor_image: None,
+            workspace_id: None,
+            subtask_total: 0,
+            subtask_done: 0,
             start_date: None,
             due_date: None,
             created_at: now,

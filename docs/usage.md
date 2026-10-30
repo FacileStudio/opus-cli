@@ -99,21 +99,64 @@ opus task show 01H8XK... --json
 ```
 
 Prints the task header, then Project, Status, Priority, Due, Start, Created and Updated, then
-assignees and labels when present, then the description, then every comment with its author
-and timestamp. Under `--json` the comments are merged into the task object as a `comments`
-key. Under `--quiet` it prints just the ID.
+the assignee and labels when present, then the description, then every comment with its author
+and timestamp. Under `--json` it prints every field the API returns (description, dates, status,
+priority, project, workspace, column, assignee, labels, subtask counts) plus the comments as a
+`comments` key. Under `--quiet` it prints just the ID.
 
 ### `opus task add`
 
 ```sh
 opus task add "Ship the release +Internal !u next friday"
-opus task add "Fix login bug *bug @jane" --json
+opus task add "Fix login bug" --project Opus --description "Repro in #12" \
+  --status to-do --priority high --start 2026-11-20 --due 2026-12-01 \
+  --assignee Yann --label bug --label auth --json
 ```
 
-Resolves `default_project` to an ID first and fails with `default project '<name>' not found`
-if it does not exist. Then parses the text (see [Inline syntax](#inline-syntax)), creates the
-task, and attaches labels and assignees in follow-up requests. Human output is
-`Created #<number> <title>`.
+Parses the text (see [Inline syntax](#inline-syntax)), creates the task, then applies any
+flags on top. A flag always wins over the same field in the text. `--project` picks the
+project by name or ID and fails if it is unknown; without it the task goes to the project in
+`+project` or to `default_project`.
+
+| Flag | Value |
+| --- | --- |
+| `--description` | Free text |
+| `--status` | Column slug of the project, for example `to-do`, `done` |
+| `--priority` | `no-priority`, `low`, `medium`, `high`, `urgent` |
+| `--project` | Project name (case-insensitive) or ID |
+| `--start`, `--due` | `YYYY-MM-DD` (UTC midnight), RFC 3339, or natural text like `next friday` |
+| `--assignee` | User ID or workspace member name |
+| `--label` | Label name, repeatable; created on the task when missing |
+
+Human output is `Created #<number> <title>`. `--json` prints the full task and `-q` prints
+the ID.
+
+### `opus task update`
+
+```sh
+opus task update 42 --title "New title" --priority urgent
+opus task update 42 --due none --assignee none
+opus task update 42 --project Mycelium --status done
+opus task update 42 --add-label bug --remove-label wip --description ""
+```
+
+Changes only the fields you pass. The API replaces the whole task on update, so the CLI
+fetches the task, merges your flags into it and sends the result. It needs at least one
+field flag.
+
+| Flag | Effect |
+| --- | --- |
+| `--title` | Set the title |
+| `--description` | Set the description; an empty string clears it |
+| `--status` | Set the status slug; with `--project` it is the status in the new project |
+| `--priority` | `no-priority`, `low`, `medium`, `high`, `urgent` |
+| `--project` | Move the task to another project (name or ID) |
+| `--start`, `--due` | Set a date; `none` clears it |
+| `--assignee` | User ID or member name; `none` unassigns |
+| `--add-label`, `--remove-label` | Label name, repeatable |
+
+Human output is `Updated #<number> <title>`. `--json` prints the full updated task and `-q`
+prints the ID.
 
 ### `opus task done` / `opus task undone`
 

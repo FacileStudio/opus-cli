@@ -52,6 +52,9 @@ opus --quick "Buy milk +Groceries *shopping !h due tomorrow"
 opus task list --project Groceries --limit 10
 opus task show <task-id> --json
 opus task add "Ship the release +Internal !u next friday"
+opus task add "Fix login" --project Opus --due 2026-12-01 --assignee Yann --label bug
+opus task update <task-id> --status done --due none
+opus task delete <task-id>
 opus workspace list
 opus workspace switch studio
 opus token list

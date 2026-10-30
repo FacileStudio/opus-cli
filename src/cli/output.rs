@@ -92,7 +92,7 @@ pub fn print_task_detail(
     }
 }
 
-pub fn print_created_task(task: &Task, mode: &OutputMode) {
+pub fn print_saved_task(task: &Task, mode: &OutputMode, verb: &str) {
     match mode {
         OutputMode::Json => {
             let json =
@@ -104,7 +104,8 @@ pub fn print_created_task(task: &Task, mode: &OutputMode) {
         }
         OutputMode::Human => {
             crate::ui::success(&format!(
-                "Created #{} {}",
+                "{} #{} {}",
+                verb,
                 task.number,
                 crate::ui::bold(&task.title)
             ));
@@ -301,6 +302,10 @@ fn print_task_detail_human(
 
     for (label, value) in &fields {
         println!("  {DIM}{:<10}{RESET} {value}", format!("{label}:"));
+    }
+
+    if let Some(name) = task.actor_name.as_deref().filter(|n| !n.is_empty()) {
+        println!("  {DIM}{:<10}{RESET} {}", "Assignee:", name);
     }
 
     if let Some(ref assignees) = task.assignees {

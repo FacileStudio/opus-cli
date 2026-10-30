@@ -3,6 +3,7 @@ use crate::opus_parser::QuickAddParser;
 use crate::debug::debug_log;
 
 pub mod tasks;
+pub mod task_write;
 pub mod projects;
 pub mod filters;
 pub mod users;

@@ -43,8 +43,18 @@ opus task list                 List tasks
 opus task show <id>            Show task + comments
   --json
 
-opus task add <text>           Create task with inline syntax
-  --json
+opus task add <text>           Create task with inline syntax, flags override it
+  --description --status --priority --project --start --due --assignee
+  --label <name> (repeatable)
+  --json / -q
+
+opus task update <id>          Change only the fields passed
+  --title --description --status --priority --project --start --due --assignee
+  --add-label <name> --remove-label <name> (repeatable)
+  --start/--due/--assignee accept "none" to clear; --description "" clears
+  --json / -q
+
+opus task delete <id>...       Delete tasks
 
 opus token list                List personal API tokens
   --json                      JSON output
