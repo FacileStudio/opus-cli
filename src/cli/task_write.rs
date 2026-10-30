@@ -1,12 +1,8 @@
-use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use crate::opus::models::Priority;
-use crate::opus_client::task_write::TaskPatch;
-use crate::opus_client::OpusClient;
-use crate::opus_parser::QuickAddParser;
-
 use super::output;
+use super::task_args::patch_from_args;
+use crate::opus_client::OpusClient;
 
 type Res<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -57,67 +53,6 @@ pub fn update_command() -> Command {
         .arg(text_arg("remove-label", "Label name to remove, repeatable").action(ArgAction::Append))
 }
 
-pub fn parse_when(raw: &str) -> Result<Option<DateTime<Utc>>, String> {
-    let text = raw.trim();
-    if text.eq_ignore_ascii_case("none") || text.eq_ignore_ascii_case("clear") {
-        return Ok(None);
-    }
-    if let Ok(parsed) = DateTime::parse_from_rfc3339(text) {
-        return Ok(Some(parsed.with_timezone(&Utc)));
-    }
-    if let Ok(day) = NaiveDate::parse_from_str(text, "%Y-%m-%d") {
-        return Ok(day.and_hms_opt(0, 0, 0).map(|d| d.and_utc()));
-    }
-    QuickAddParser::new()
-        .parse_date(text)
-        .map(Some)
-        .ok_or_else(|| format!("cannot read date '{}'", raw))
-}
-
-pub fn parse_assignee(raw: &str) -> Option<String> {
-    let text = raw.trim();
-    if text.eq_ignore_ascii_case("none") || text.is_empty() {
-        None
-    } else {
-        Some(text.to_string())
-    }
-}
-
-fn values(args: &ArgMatches, name: &str) -> Vec<String> {
-    args.try_get_many::<String>(name)
-        .ok()
-        .flatten()
-        .map(|v| v.cloned().collect())
-        .unwrap_or_default()
-}
-
-fn value(args: &ArgMatches, name: &str) -> Option<String> {
-    args.try_get_one::<String>(name).ok().flatten().cloned()
-}
-
-pub fn patch_from_args(args: &ArgMatches) -> Result<TaskPatch, String> {
-    let priority = match value(args, "priority") {
-        Some(p) => Some(p.parse::<Priority>()?.to_string()),
-        None => None,
-    };
-    let start = value(args, "start").map(|v| parse_when(&v)).transpose()?;
-    let due = value(args, "due").map(|v| parse_when(&v)).transpose()?;
-    let mut add_labels = values(args, "label");
-    add_labels.extend(values(args, "add-label"));
-    Ok(TaskPatch {
-        title: value(args, "title"),
-        description: value(args, "description"),
-        status: value(args, "status"),
-        priority,
-        project: value(args, "project"),
-        start,
-        due,
-        assignee: value(args, "assignee").map(|v| parse_assignee(&v)),
-        add_labels,
-        remove_labels: values(args, "remove-label"),
-    })
-}
-
 pub async fn handle_add(client: &OpusClient, args: &ArgMatches, default_project: &str) -> Res<()> {
     let mode = output::output_mode_from_args(args);
     let text = args.get_one::<String>("text").unwrap();
@@ -151,94 +86,4 @@ pub async fn handle_update(client: &OpusClient, args: &ArgMatches) -> Res<()> {
     let task = client.patch_task(id, &patch).await?;
     output::print_saved_task(&task, &mode, "Updated");
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::TimeZone;
-
-    fn parse(argv: &[&str]) -> ArgMatches {
-        let mut full = vec!["opus", "update", "7"];
-        full.extend_from_slice(argv);
-        update_command().get_matches_from(&full[1..])
-    }
-
-    #[test]
-    fn iso_dates_land_on_utc_midnight() {
-        let expected = Utc.with_ymd_and_hms(2026, 11, 5, 0, 0, 0).unwrap();
-        assert_eq!(parse_when("2026-11-05"), Ok(Some(expected)));
-    }
-
-    #[test]
-    fn rfc3339_keeps_the_instant() {
-        let expected = Utc.with_ymd_and_hms(2026, 11, 5, 8, 30, 0).unwrap();
-        assert_eq!(parse_when("2026-11-05T09:30:00+01:00"), Ok(Some(expected)));
-    }
-
-    #[test]
-    fn none_and_clear_mean_no_date() {
-        assert_eq!(parse_when("none"), Ok(None));
-        assert_eq!(parse_when("CLEAR"), Ok(None));
-    }
-
-    #[test]
-    fn garbage_dates_are_rejected() {
-        assert!(parse_when("whenever-ish").is_err());
-    }
-
-    #[test]
-    fn untouched_flags_stay_unset() {
-        let patch = patch_from_args(&parse(&["--title", "T"])).unwrap();
-        assert_eq!(patch.title.as_deref(), Some("T"));
-        assert!(patch.start.is_none() && patch.due.is_none() && patch.assignee.is_none());
-        assert!(patch.description.is_none());
-    }
-
-    #[test]
-    fn clear_flags_map_to_explicit_nulls() {
-        let argv = [
-            "--due",
-            "none",
-            "--start",
-            "none",
-            "--assignee",
-            "none",
-            "--description",
-            "",
-        ];
-        let patch = patch_from_args(&parse(&argv)).unwrap();
-        assert_eq!(patch.due, Some(None));
-        assert_eq!(patch.start, Some(None));
-        assert_eq!(patch.assignee, Some(None));
-        assert_eq!(patch.description.as_deref(), Some(""));
-    }
-
-    #[test]
-    fn priority_is_validated_and_labels_collect() {
-        assert!(patch_from_args(&parse(&["--priority", "huge"])).is_err());
-        let argv = [
-            "--priority",
-            "urgent",
-            "--add-label",
-            "a",
-            "--add-label",
-            "b",
-            "--remove-label",
-            "c",
-        ];
-        let patch = patch_from_args(&parse(&argv)).unwrap();
-        assert_eq!(patch.priority.as_deref(), Some("urgent"));
-        assert_eq!(patch.add_labels, vec!["a", "b"]);
-        assert_eq!(patch.remove_labels, vec!["c"]);
-    }
-
-    #[test]
-    fn add_label_flag_is_collected_for_add() {
-        let matches =
-            add_command().get_matches_from(["add", "text", "--label", "x", "--label", "y"]);
-        let patch = patch_from_args(&matches).unwrap();
-        assert_eq!(patch.add_labels, vec!["x", "y"]);
-        assert!(!patch.is_empty());
-    }
 }
