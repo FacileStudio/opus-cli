@@ -10,6 +10,13 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-30
+
+### Changed
+
+- Split the task write code into smaller modules (`task_patch`, `task_args`, `task_values`) to
+  meet the filet size limits. No change in behaviour.
+
 ## [0.7.0] - 2026-10-30
 
 ### Added
@@ -174,7 +181,8 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/FacileStudio/opus-cli/compare/v0.7.0...v0.7.1
 [0.6.1]: https://github.com/FacileStudio/opus-cli/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FacileStudio/opus-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/FacileStudio/opus-cli/compare/v0.4.0...v0.5.0
