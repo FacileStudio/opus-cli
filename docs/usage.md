@@ -218,6 +218,19 @@ and prints a confirmation. On no match it lists the available workspaces on stde
 Under `--dev-env` there is no config object to persist to, so the switch prints its confirmation
 without saving.
 
+## `opus login`
+
+```sh
+opus login [url] [--no-listener] [--token <token> | --token-stdin]
+```
+
+Signs in and saves `api_url` and `api_key` to the config file. The URL resolves as argument,
+then `OPUS_API_URL` or `OPUS_SERVER_URL`, then the config file, then `https://opus.facile.studio`.
+The browser opens on the instance, the existing Facile session completes the login, and the
+CLI receives the result on a loopback port. `--no-listener` shows the code on the page and
+reads it from stdin, for a terminal whose browser is on another machine. `--token` and
+`--token-stdin` skip the browser and save an existing token after checking it.
+
 ## `opus token`
 
 Manage personal API tokens. A token authenticates as you on every route a browser session

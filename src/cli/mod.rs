@@ -1,3 +1,7 @@
+pub mod login;
+pub mod login_http;
+pub mod loopback;
+pub mod loopback_page;
 pub mod output;
 pub mod task;
 pub mod task_args;

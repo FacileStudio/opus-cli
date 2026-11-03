@@ -74,6 +74,7 @@ fn main() {
                 .global(true)
                 .action(clap::ArgAction::SetTrue)
         )
+        .subcommand(cli::login::subcommand())
         .subcommand(cli::task::subcommand())
         .subcommand(cli::workspace::subcommand())
         .subcommand(cli::token::subcommand())
@@ -115,6 +116,14 @@ fn main() {
                 }
             }
         });
+        std::process::exit(if result.is_ok() { 0 } else { 1 });
+    }
+
+    if let Some(("login", sub_matches)) = matches.subcommand() {
+        let result = cli::login::handle(sub_matches, matches.get_one::<String>("config").map(|s| s.as_str()));
+        if let Err(e) = &result {
+            ui::error(e);
+        }
         std::process::exit(if result.is_ok() { 0 } else { 1 });
     }
 

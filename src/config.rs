@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 /// page hands out. The other two are accepted because they are the spellings
 /// people reach for, and a credential channel that answers to one name only
 /// fails in a way that reads as a bad token.
+pub const DEFAULT_URL: &str = "https://opus.facile.studio";
+
 const TOKEN_VARS: [&str; 3] = ["OPUS_TOKEN", "OPUS_API_KEY", "OPUS_KEY"];
 
 /// Everything the CLI needs to talk to an Opus instance, resolved once from
@@ -60,7 +62,9 @@ impl Settings {
         let api_url = env_value("OPUS_API_URL")
             .or_else(|| env_value("OPUS_SERVER_URL"))
             .or_else(|| config.as_ref().map(|cfg| cfg.api_url.clone()))
-            .unwrap_or_else(|| "http://localhost:1337".to_string());
+            .unwrap_or_else(|| {
+                if dev_env { "http://localhost:1337".to_string() } else { DEFAULT_URL.to_string() }
+            });
 
         let workspace_id = workspace_override
             .map(str::to_string)
@@ -157,7 +161,7 @@ pub struct OpusConfig {
 impl Default for OpusConfig {
     fn default() -> Self {
         OpusConfig {
-            api_url: "http://localhost:1337".to_string(),
+            api_url: DEFAULT_URL.to_string(),
             api_key: None,
             workspace_id: None,
             default_project: None,

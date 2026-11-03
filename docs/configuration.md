@@ -28,7 +28,7 @@ default_filter: "Active"
 
 | Key | Required | Default | What it does |
 |---|---|---|---|
-| `api_url` | no | `http://localhost:1337` | Instance root. A trailing `/api` and slashes are stripped |
+| `api_url` | no | `https://opus.facile.studio` (`http://localhost:1337` under `--dev-env`) | Instance root. A trailing `/api` and slashes are stripped |
 | `api_key` | no | — | Bearer token. Required unless `OPUS_TOKEN` is set, or the file is missing and `--dev-env` is passed |
 | `workspace_id` | no | `""` | Sent as `workspaceId` on project, label and member queries |
 | `default_project` | no | `Inbox` | Project used when the task text has no `+project` |
@@ -101,7 +101,7 @@ simply one that is allowed to have no config file at all.
 | `OPUS_TOKEN` | `api_key` | `demo-token` under `--dev-env`, otherwise unset |
 | `OPUS_API_KEY` | `api_key`, if `OPUS_TOKEN` is unset | — |
 | `OPUS_KEY` | `api_key`, if both above are unset | — |
-| `OPUS_API_URL` | `api_url` | `http://localhost:1337` |
+| `OPUS_API_URL` | `api_url` | `https://opus.facile.studio` (`http://localhost:1337` under `--dev-env`) |
 | `OPUS_WORKSPACE_ID` | `workspace_id` | `""` |
 | `OPUS_DEFAULT_PROJECT` | `default_project` | `Inbox` |
 | `OPUS_DEBUG` | — | unset |
@@ -124,7 +124,7 @@ opus token create --name laptop
 
 Or in the Opus dashboard under **Settings > Account > Developer**, which lists the same tokens
 and prints the value once on creation. Either way the token is what `api_key` or `OPUS_TOKEN`
-should hold. There is no `opus login`, no device flow and no OIDC path in the CLI.
+should hold. `opus login` fills both `api_url` and `api_key` for you through the browser.
 
 ## Token storage
 
