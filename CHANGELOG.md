@@ -10,6 +10,19 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-03
+
+### Added
+
+- `opus login [url]` signs in through the browser and saves the credential. A session already
+  open with another Facile tool completes it with no prompt and no code to paste. Fallbacks:
+  `--no-listener` (paste the code), `--token` and `--token-stdin`.
+
+### Changed
+
+- The default server is `https://opus.facile.studio` instead of `http://localhost:1337`.
+  `--dev-env` keeps the localhost default.
+
 ## [0.7.1] - 2026-10-30
 
 ### Changed
