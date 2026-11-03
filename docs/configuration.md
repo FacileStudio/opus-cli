@@ -124,7 +124,7 @@ opus token create --name laptop
 
 Or in the Opus dashboard under **Settings > Account > Developer**, which lists the same tokens
 and prints the value once on creation. Either way the token is what `api_key` or `OPUS_TOKEN`
-should hold. `opus login` fills both `api_url` and `api_key` for you through the browser.
+should hold. `opus login` fills both `api_url` and `api_key` for you through a browser approval link.
 
 ## Token storage
 

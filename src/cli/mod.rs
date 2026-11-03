@@ -1,3 +1,5 @@
+pub mod device;
+pub mod device_poll;
 pub mod login;
 pub mod login_http;
 pub mod loopback;

@@ -221,15 +221,29 @@ without saving.
 ## `opus login`
 
 ```sh
-opus login [url] [--no-listener] [--token <token> | --token-stdin]
+opus login [url] [--listener] [--token <token> | --token-stdin]
 ```
 
 Signs in and saves `api_url` and `api_key` to the config file. The URL resolves as argument,
 then `OPUS_API_URL` or `OPUS_SERVER_URL`, then the config file, then `https://opus.facile.studio`.
-The browser opens on the instance, the existing Facile session completes the login, and the
-CLI receives the result on a loopback port. `--no-listener` shows the code on the page and
-reads it from stdin, for a terminal whose browser is on another machine. `--token` and
-`--token-stdin` skip the browser and save an existing token after checking it.
+
+By default the login uses the OAuth 2.0 device grant (RFC 8628) against
+`https://sso.facile.studio`, as the public client `facile-cli`. The CLI prints the
+`verification_uri_complete` link, tries to open it, and polls the token endpoint, honoring
+`interval`, `slow_down`, `authorization_pending`, `expired_token` and `access_denied`. The user
+code is shown only as a confirmation hint. Once approved, the CLI trades the Registre access token
+for an Opus token at `POST <url>/api/auth/oidc/device/exchange`. Nothing listens on the machine
+and nothing is pasted, so it works over SSH. A 401 there means the account never signed in to
+Opus in a browser: sign in once on the web, then run `opus login` again.
+
+`--listener` uses the loopback flow instead: the browser opens on the instance, the existing
+Facile session completes the login, and the CLI receives the result on a loopback port. It
+needs a browser on the same machine. Login falls back to it automatically, with a one-line
+notice, when the instance answers 404 on the device exchange.
+
+`--no-listener` is a hidden alias for the default and is kept so existing scripts still run. The
+paste-the-code mode it used to select is gone. `--token` and `--token-stdin` skip the browser and
+save an existing token after checking it.
 
 ## `opus token`
 

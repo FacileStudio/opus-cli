@@ -53,7 +53,7 @@ opus task list --project Groceries --limit 10
 opus task show <task-id> --json
 opus task add "Ship the release +Internal !u next friday"
 opus task add "Fix login" --project Opus --due 2026-12-01 --assignee Yann --label bug
-opus login                             # browser sign-in to https://opus.facile.studio
+opus login                             # browser approval link, works over SSH
 opus task update <task-id> --status done --due none
 opus task delete <task-id>
 opus workspace list
@@ -92,10 +92,10 @@ default_project: "Inbox"
 | `OPUS_WORKSPACE_ID` | `workspace_id` |
 | `OPUS_DEFAULT_PROJECT` | `default_project` |
 
-`opus login` signs in through your browser and writes `api_url` and `api_key` for you. With no URL it
-uses `https://opus.facile.studio`. A session already open with another Facile tool completes it
-without a prompt. On a machine without a browser use `opus login --no-listener` (paste the code
-from the page) or `opus login --token-stdin`.
+`opus login` prints a browser approval link and writes `api_url` and `api_key` for you. With no URL it
+uses `https://opus.facile.studio`. Approve the sign-in in any browser, on any device; the CLI polls
+until you do. Nothing listens on your machine and nothing is pasted, so it works over SSH. Use
+`opus login --listener` for the older loopback flow, or `opus login --token-stdin` to save a token.
 
 Create a token with `opus token create --name <name>`, or in the Opus dashboard under
 Settings > Account > Developer. Precedence is flag > environment > config file > default. Full

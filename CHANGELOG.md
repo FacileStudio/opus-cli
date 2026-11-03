@@ -10,6 +10,26 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-03
+
+### Changed
+
+- **`opus login` signs in with a browser approval link and works over SSH.** It uses the OAuth 2.0
+  device grant against `https://sso.facile.studio`: the CLI prints the link, tries to open it,
+  polls until the sign-in is approved on any device, then trades the approval for an Opus token
+  at `POST /api/auth/oidc/device/exchange`. Nothing listens on the machine and nothing is pasted.
+- When the instance answers 404 on the device exchange, login falls back to the loopback flow with
+  a one-line notice.
+
+### Added
+
+- `opus login --listener` keeps the loopback listener flow.
+
+### Removed
+
+- The paste-the-code mode. `--no-listener` is now a hidden alias for the default, so scripts that
+  pass it keep working.
+
 ## [0.8.0] - 2026-11-03
 
 ### Added
@@ -194,7 +214,9 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/FacileStudio/opus-cli/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/FacileStudio/opus-cli/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/FacileStudio/opus-cli/compare/v0.7.0...v0.7.1
 [0.6.1]: https://github.com/FacileStudio/opus-cli/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/FacileStudio/opus-cli/compare/v0.5.0...v0.6.0

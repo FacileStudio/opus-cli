@@ -1,20 +1,22 @@
-use std::io::{self, BufRead, IsTerminal, Read};
+use std::io::{self, Read};
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use crate::cli::login_http::{exchange, non_empty, offers_sso, verify};
+use crate::cli::device::Provider;
+use crate::cli::login_http::{device_exchange, device_exchange_mounted, exchange, non_empty, offers_sso, verify};
 use crate::cli::loopback::{open_browser, random_state, Loopback};
 use crate::config::{OpusConfig, DEFAULT_URL};
 use crate::ui;
 
 pub fn subcommand() -> Command {
     Command::new("login")
-        .about("Sign in through your browser and save the credential")
+        .about("Sign in through a browser approval link and save the credential")
         .long_about(
-            "Sign in through your browser and save the credential.\n\n\
-             With no URL this signs in to https://opus.facile.studio. A session already open with \
-             another Facile tool completes the login without a prompt.\n\n\
-             opus login --no-listener      sign in from a browser on another machine, paste the code\n\
+            "Sign in through a browser approval link and save the credential.\n\n\
+             With no URL this signs in to https://opus.facile.studio. The CLI prints a link, tries to \
+             open it, and waits until you approve the sign-in in any browser. Nothing listens on this \
+             machine and nothing is pasted, so it works over SSH.\n\n\
+             opus login --listener         loopback flow, needs a browser on this machine\n\
              opus login --token <token>    use a token from Settings > Account > Developer\n\
              opus login --token-stdin      read the token from stdin",
         )
@@ -27,11 +29,13 @@ pub fn subcommand() -> Command {
                 .help("Read the token from stdin"),
         )
         .arg(
-            Arg::new("no-listener")
-                .long("no-listener")
+            Arg::new("listener")
+                .long("listener")
                 .action(ArgAction::SetTrue)
-                .help("Show the code on the page and paste it here"),
+                .conflicts_with("no-listener")
+                .help("Use the loopback listener instead of the approval link"),
         )
+        .arg(Arg::new("no-listener").long("no-listener").action(ArgAction::SetTrue).hide(true))
 }
 
 pub fn handle(matches: &ArgMatches, config_path: Option<&str>) -> Result<(), String> {
@@ -71,43 +75,33 @@ fn obtain_token(matches: &ArgMatches, base: &str) -> Result<String, String> {
     if !offers_sso(base) {
         return Err(format!("{base} offers no browser sign-in, use --token or --token-stdin"));
     }
-    let interactive = io::stdin().is_terminal() && io::stdout().is_terminal();
-    if matches.get_flag("no-listener") || !interactive {
-        return paste_login(base, interactive);
+    if !matches.get_flag("listener") {
+        if device_exchange_mounted(base)? {
+            return device_login(base);
+        }
+        ui::hint("This server has no device sign-in yet, falling back to the browser listener.");
     }
     browser_login(base)
+}
+
+fn device_login(base: &str) -> Result<String, String> {
+    let provider = Provider::discover()?;
+    let auth = provider.authorize()?;
+    ui::step(&format!("Approve this sign-in in a browser: {}", auth.link));
+    ui::hint(&format!("The page shows the code {}. Waiting for approval.", auth.user_code));
+    open_browser(&auth.link);
+    let access_token = provider.await_token(&auth)?;
+    device_exchange(base, &access_token)
 }
 
 fn browser_login(base: &str) -> Result<String, String> {
     let listener = Loopback::listen()?;
     let state = random_state();
     let url = format!("{base}/api/auth/oidc?flow=cli&port={}&cli_state={state}", listener.port());
-    if open_browser(&url) {
-        ui::step("Waiting for the browser to finish signing you in");
-    } else {
-        ui::step(&format!("Open this URL in your browser to sign in: {url}"));
-    }
+    open_browser(&url);
+    ui::step(&format!("Finish signing in in your browser: {url}"));
     let code = listener.wait_for_code(&state)?;
     exchange(base, &code)
-}
-
-fn paste_login(base: &str, interactive: bool) -> Result<String, String> {
-    if !io::stdin().is_terminal() {
-        return Err("no terminal to paste a code into, use --token-stdin".to_string());
-    }
-    let url = format!("{base}/api/auth/oidc?flow=cli");
-    ui::step(&format!("Open this URL in your browser to sign in: {url}"));
-    if interactive {
-        open_browser(&url);
-    }
-    println!("Paste the code from that page:");
-    let mut line = String::new();
-    io::stdin().lock().read_line(&mut line).map_err(|e| format!("failed to read the login code: {e}"))?;
-    let code = line.trim();
-    if code.is_empty() {
-        return Err("no login code was pasted, run 'opus login' again".to_string());
-    }
-    exchange(base, code)
 }
 
 #[cfg(test)]
