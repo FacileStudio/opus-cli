@@ -10,6 +10,10 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+### Added
+
+- opus-cli is released under the [MIT License](LICENSE).
+
 ## [0.9.0] - 2026-11-03
 
 ### Changed

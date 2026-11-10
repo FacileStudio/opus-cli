@@ -125,6 +125,10 @@ integrations/     SKILL.md, registered with Claude Code and Codex by install.sh
 | [Development](docs/development.md) | Building, tests, layout of the source tree |
 | [Usage](docs/usage.md) | Every command, flag, keybinding and syntax token |
 
+## License
+
+opus-cli is released under the [MIT License](LICENSE).
+
 ---
 
 Part of the [Facile Suite](https://facile.studio), self-hosted tools for creative studios
