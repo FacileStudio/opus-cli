@@ -10,9 +10,17 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-11
+
 ### Added
 
 - opus-cli is released under the [MIT License](LICENSE).
+
+### Security
+
+- openssl 0.10.82 (openssl-sys 0.9.118), rustls-webpki 0.103.16 and h2 0.4.20, for the
+  advisories against the versions in the previous lockfile. The h2 bump also clears an
+  unscored RUSTSEC-2026-0258 that left the douane scan incomplete.
 
 ## [0.9.0] - 2026-11-03
 
@@ -218,7 +226,8 @@ what shipped rather than what was written down at the time.
 
 - Device auth. An API key is the only credential.
 
-[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/FacileStudio/opus-cli/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/FacileStudio/opus-cli/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/FacileStudio/opus-cli/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/FacileStudio/opus-cli/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/FacileStudio/opus-cli/compare/v0.7.0...v0.7.1
