@@ -18,7 +18,7 @@ pub async fn handle_edit_modal(
         match key.code {
             KeyCode::Char('z') => {
                 debug_log("Edit Modal: Undo requested (Ctrl+Z)");
-                if let Some(_) = app.undo_last_action() {
+                if app.undo_last_action().is_some() {
                     debug_log("Edit Modal: Undo successful");
                 } else {
                     debug_log("Edit Modal: No action to undo");
@@ -27,7 +27,7 @@ pub async fn handle_edit_modal(
             },
             KeyCode::Char('y') => {
                 debug_log("Edit Modal: Redo requested (Ctrl+Y)");
-                if let Some(_) = app.redo_last_action() {
+                if app.redo_last_action().is_some() {
                     debug_log("Edit Modal: Redo successful");
                 } else {
                     debug_log("Edit Modal: No action to redo");
@@ -66,7 +66,7 @@ pub async fn handle_edit_modal(
                 let suggestion = app.suggestions[app.selected_suggestion].clone();
                 let cursor = app.edit_cursor_position;
                 let input = app.get_edit_input();
-                if let Some(pos) = input[..cursor].rfind(|c| c == '*' || c == '+') {
+                if let Some(pos) = input[..cursor].rfind(['*', '+']) {
                     let mut new_input = String::new();
                     new_input.push_str(&input[..pos]);
                     new_input.push(input.chars().nth(pos).unwrap());
@@ -77,7 +77,7 @@ pub async fn handle_edit_modal(
                         new_input.push_str(&suggestion);
                     }
 
-                    if input.get(cursor..cursor+1).map_or(true, |c| c == " " || c == "") {
+                    if input.get(cursor..cursor+1).is_none_or(|c| c == " " || c.is_empty()) {
                         new_input.push(' ');
                         new_input.push_str(&input[cursor..]);
                         app.edit_cursor_position = pos + 1 +
@@ -96,9 +96,8 @@ pub async fn handle_edit_modal(
             }
             debug_log(&format!("Submitting edit task with input: '{}'", app.get_edit_input()));
             let input = app.get_edit_input().to_string();
-            let task_id = app.editing_task_id.clone();
-            if !input.trim().is_empty() && task_id.is_some() {
-                let tid = task_id.unwrap();
+            let task_id = app.editing_task_id.clone().filter(|_| !input.trim().is_empty());
+            if let Some(tid) = task_id {
                 debug_log(&format!("Updating task ID {} with input: '{}'", tid, input));
                 app.hide_edit_modal();
                 let update_result = {
@@ -130,7 +129,7 @@ pub async fn handle_edit_modal(
                 let suggestion = app.suggestions[app.selected_suggestion].clone();
                 let cursor = app.edit_cursor_position;
                 let input = app.get_edit_input();
-                if let Some(pos) = input[..cursor].rfind(|c| c == '*' || c == '+') {
+                if let Some(pos) = input[..cursor].rfind(['*', '+']) {
                     let mut new_input = String::new();
                     new_input.push_str(&input[..pos]);
                     new_input.push(input.chars().nth(pos).unwrap());
@@ -141,7 +140,7 @@ pub async fn handle_edit_modal(
                         new_input.push_str(&suggestion);
                     }
 
-                    if input.get(cursor..cursor+1).map_or(true, |c| c == " " || c == "") {
+                    if input.get(cursor..cursor+1).is_none_or(|c| c == " " || c.is_empty()) {
                         new_input.push(' ');
                         new_input.push_str(&input[cursor..]);
                         app.edit_cursor_position = pos + 1 +

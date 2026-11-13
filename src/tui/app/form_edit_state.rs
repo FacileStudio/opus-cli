@@ -67,12 +67,12 @@ mod tests {
         let test_values = [
             "New Title", "New Description", "2025-12-31", "2025-11-01", "high", "", "", "", "", "A comment"
         ];
-        for i in 0..FormEditState::get_field_count() {
+        for (i, expected) in test_values.iter().enumerate().take(FormEditState::get_field_count()) {
             form.field_index = i;
-            if !test_values[i].is_empty() {
-                form.set_current_field_text(test_values[i].to_string());
+            if !expected.is_empty() {
+                form.set_current_field_text(expected.to_string());
                 let value = form.get_current_field_text();
-                assert_eq!(value, test_values[i]);
+                assert_eq!(value, *expected);
             }
         }
         assert_eq!(form.title, "New Title");
@@ -132,7 +132,7 @@ impl FormEditState {
     }
     pub fn new(task: &Task) -> Self {
         let priority_str = match &task.priority {
-            Priority::NoPriority => None,
+            Priority::Unset => None,
             p => Some(p.to_string()),
         };
         Self {

@@ -54,10 +54,11 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub enum Priority {
     #[serde(rename = "no-priority")]
-    NoPriority,
+    #[default]
+    Unset,
     #[serde(rename = "low")]
     Low,
     #[serde(rename = "medium")]
@@ -68,16 +69,10 @@ pub enum Priority {
     Urgent,
 }
 
-impl Default for Priority {
-    fn default() -> Self {
-        Priority::NoPriority
-    }
-}
-
 impl fmt::Display for Priority {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            Priority::NoPriority => "no-priority",
+            Priority::Unset => "no-priority",
             Priority::Low => "low",
             Priority::Medium => "medium",
             Priority::High => "high",
@@ -92,7 +87,7 @@ impl FromStr for Priority {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "no-priority" => Ok(Priority::NoPriority),
+            "no-priority" => Ok(Priority::Unset),
             "low" => Ok(Priority::Low),
             "medium" => Ok(Priority::Medium),
             "high" => Ok(Priority::High),

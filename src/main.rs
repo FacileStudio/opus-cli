@@ -188,7 +188,7 @@ fn main() {
 
     crate::debug::clear_debug_log();
     debug_log("Starting Opus application");
-    debug_log(&format!("Environment variables:"));
+    debug_log("Environment variables:");
     debug_log(&format!("  OPUS_API_URL: {:?}", std::env::var("OPUS_API_URL")));
     debug_log(&format!("  OPUS_API_KEY: {:?}", std::env::var("OPUS_API_KEY").map(|t| format!("{}...", &t[..t.len().min(8)]))));
     debug_log(&format!("  OPUS_WORKSPACE_ID: {:?}", std::env::var("OPUS_WORKSPACE_ID")));

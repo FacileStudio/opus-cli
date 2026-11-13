@@ -391,7 +391,7 @@ pub fn draw_help_modal(f: &mut Frame, app: &App) {
     help_lines.push(Line::raw("─ Quick Actions (Space for modal) ─"));
     for action in &quick_actions {
         help_lines.push(Line::from(vec![
-            Span::styled(format!("{}", action.key), Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(action.key.to_string(), Style::default().add_modifier(Modifier::BOLD)),
             Span::raw(format!(": {}", action.get_description()))
         ]));
     }

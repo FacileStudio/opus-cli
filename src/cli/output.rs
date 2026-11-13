@@ -126,7 +126,7 @@ fn priority_display(priority: &Priority) -> String {
         Priority::High => format!("{YELLOW}high{RESET}"),
         Priority::Medium => format!("{BLUE}medium{RESET}"),
         Priority::Low => format!("{DIM}low{RESET}"),
-        Priority::NoPriority => format!("{DIM}\u{2014}{RESET}"),
+        Priority::Unset => format!("{DIM}\u{2014}{RESET}"),
     }
 }
 
@@ -228,16 +228,14 @@ fn print_task_table(tasks: &[Task], project_map: &HashMap<String, String>) {
         .map(|r| r.project.len())
         .max()
         .unwrap_or(7)
-        .max(7)
-        .min(20);
+        .clamp(7, 20);
     let col_pri = 12;
     let col_status = rows
         .iter()
         .map(|r| visible_len(&r.status))
         .max()
         .unwrap_or(6)
-        .max(6)
-        .min(16);
+        .clamp(6, 16);
     let col_due = 10;
 
     let term_width = terminal_width().unwrap_or(100);

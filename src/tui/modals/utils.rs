@@ -1,25 +1,25 @@
-/// Modal utilities: centralized viewport guard and constants for modal maintainability.
-///
-/// All modal openers must use `try_show_modal` to check viewport size before opening.
-/// If the terminal is too small, a toast is shown and the modal is not opened.
-///
-/// Maintainability: Do not duplicate viewport checks in modal draw functions. All guards are centralized here.
-///
-/// Usage:
-/// Example usage (project-specific types, not runnable as a doc test):
-/// ```ignore
-/// use opus_cli::tui::modals::utils::try_show_modal;
-/// // ... setup your App and Terminal types ...
-/// if try_show_modal(app, terminal, |app| app.show_edit_modal()) {
-///     // Modal opened
-/// }
-/// ```
-///
-/// Constants:
-/// - MIN_MODAL_WIDTH: Minimum width for any modal
-/// - MIN_MODAL_HEIGHT: Minimum height for any modal
-///
-/// See mod.rs for subsystem documentation.
+//! Modal utilities: centralized viewport guard and constants for modal maintainability.
+//!
+//! All modal openers must use `try_show_modal` to check viewport size before opening.
+//! If the terminal is too small, a toast is shown and the modal is not opened.
+//!
+//! Maintainability: Do not duplicate viewport checks in modal draw functions. All guards are centralized here.
+//!
+//! Usage:
+//! Example usage (project-specific types, not runnable as a doc test):
+//! ```ignore
+//! use opus_cli::tui::modals::utils::try_show_modal;
+//! // ... setup your App and Terminal types ...
+//! if try_show_modal(app, terminal, |app| app.show_edit_modal()) {
+//!     // Modal opened
+//! }
+//! ```
+//!
+//! Constants:
+//! - MIN_MODAL_WIDTH: Minimum width for any modal
+//! - MIN_MODAL_HEIGHT: Minimum height for any modal
+//!
+//! See mod.rs for subsystem documentation.
 
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use crate::tui::app::state::App;

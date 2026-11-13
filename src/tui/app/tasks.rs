@@ -53,7 +53,7 @@ impl App {
                     let task = self.tasks.remove(pos);
                     self.add_debug_message(format!("Task deleted: {}", task.title));
                     self.show_toast(format!("Task deleted: {}", task.title));
-                    self.add_to_undo_stack(UndoableAction::TaskDeletion { task, position: pos });
+                    self.add_to_undo_stack(UndoableAction::Deletion { task, position: pos });
                 }
             },
             Err(e) => {
@@ -68,32 +68,32 @@ impl App {
             let task = self.tasks.remove(pos);
             self.add_debug_message(format!("Task deleted: {}", task.title));
             self.show_toast(format!("Task deleted: {}", task.title));
-            self.add_to_undo_stack(UndoableAction::TaskDeletion { task, position: pos });
+            self.add_to_undo_stack(UndoableAction::Deletion { task, position: pos });
         }
     }
     #[allow(dead_code)]
     pub fn undo_last_action(&mut self) -> Option<String> {
         if let Some(action) = self.undo_stack.pop() {
             let result = match &action {
-                UndoableAction::TaskDeletion { task, position } => {
+                UndoableAction::Deletion { task, position } => {
                     let tasks_len = self.tasks.len();
                     let insert_position = (*position).min(tasks_len);
                     self.tasks.insert(insert_position, task.clone());
                     self.selected_task_index = insert_position;
                     self.add_debug_message(format!("Undid deletion of task '{}'", task.title));
-                    self.redo_stack.push(UndoableAction::TaskCreation {
+                    self.redo_stack.push(UndoableAction::Creation {
                         task_id: task.id.clone(),
                     });
                     Some(task.id.clone())
                 }
-                UndoableAction::TaskCreation { task_id } => {
+                UndoableAction::Creation { task_id } => {
                     if let Some(position) = self.tasks.iter().position(|t| t.id == *task_id) {
                         let task = self.tasks.remove(position);
                         if self.selected_task_index >= self.tasks.len() && !self.tasks.is_empty() {
                             self.selected_task_index = self.tasks.len() - 1;
                         }
                         self.add_debug_message(format!("Undid creation of task '{}'", task.title));
-                        self.redo_stack.push(UndoableAction::TaskDeletion {
+                        self.redo_stack.push(UndoableAction::Deletion {
                             task: task.clone(),
                             position,
                         });
@@ -102,12 +102,12 @@ impl App {
                         None
                     }
                 }
-                UndoableAction::TaskEdit { task_id, previous_task } => {
+                UndoableAction::Edit { task_id, previous_task } => {
                     if let Some(task) = self.tasks.iter_mut().find(|t| t.id == *task_id) {
                         let current_task = task.clone();
                         *task = previous_task.clone();
                         self.add_debug_message(format!("Undid edit of task '{}'", previous_task.title));
-                        self.redo_stack.push(UndoableAction::TaskEdit {
+                        self.redo_stack.push(UndoableAction::Edit {
                             task_id: task_id.clone(),
                             previous_task: current_task,
                         });
@@ -131,25 +131,25 @@ impl App {
     pub fn redo_last_action(&mut self) -> Option<String> {
         if let Some(action) = self.redo_stack.pop() {
             let result = match &action {
-                UndoableAction::TaskDeletion { task, position } => {
+                UndoableAction::Deletion { task, position } => {
                     let tasks_len = self.tasks.len();
                     let insert_position = (*position).min(tasks_len);
                     self.tasks.insert(insert_position, task.clone());
                     self.selected_task_index = insert_position;
                     self.add_debug_message(format!("Redid deletion of task '{}'", task.title));
-                    self.undo_stack.push(UndoableAction::TaskCreation {
+                    self.undo_stack.push(UndoableAction::Creation {
                         task_id: task.id.clone(),
                     });
                     Some(task.id.clone())
                 }
-                UndoableAction::TaskCreation { task_id } => {
+                UndoableAction::Creation { task_id } => {
                     if let Some(position) = self.tasks.iter().position(|t| t.id == *task_id) {
                         let task = self.tasks.remove(position);
                         if self.selected_task_index >= self.tasks.len() && !self.tasks.is_empty() {
                             self.selected_task_index = self.tasks.len() - 1;
                         }
                         self.add_debug_message(format!("Redid creation of task '{}'", task.title));
-                        self.undo_stack.push(UndoableAction::TaskDeletion {
+                        self.undo_stack.push(UndoableAction::Deletion {
                             task: task.clone(),
                             position,
                         });
@@ -158,12 +158,12 @@ impl App {
                         None
                     }
                 }
-                UndoableAction::TaskEdit { task_id, previous_task } => {
+                UndoableAction::Edit { task_id, previous_task } => {
                     if let Some(task) = self.tasks.iter_mut().find(|t| t.id == *task_id) {
                         let current_task = task.clone();
                         *task = previous_task.clone();
                         self.add_debug_message(format!("Redid edit of task '{}'", previous_task.title));
-                        self.undo_stack.push(UndoableAction::TaskEdit {
+                        self.undo_stack.push(UndoableAction::Edit {
                             task_id: task_id.clone(),
                             previous_task: current_task,
                         });
@@ -193,7 +193,7 @@ impl App {
         self.undo_stack.push(action);
     }
     #[allow(dead_code)]
-    pub fn add_task_to_undo_stack(&mut self, task_id: String) { if let Some(_task) = self.tasks.iter().find(|t| t.id == task_id) { let action = UndoableAction::TaskCreation { task_id }; self.add_to_undo_stack(action); } }
+    pub fn add_task_to_undo_stack(&mut self, task_id: String) { if let Some(_task) = self.tasks.iter().find(|t| t.id == task_id) { let action = UndoableAction::Creation { task_id }; self.add_to_undo_stack(action); } }
     #[allow(dead_code)]
-    pub fn add_task_edit_to_undo_stack(&mut self, task_id: String, previous_task: Task) { let action = UndoableAction::TaskEdit { task_id, previous_task }; self.add_to_undo_stack(action); }
+    pub fn add_task_edit_to_undo_stack(&mut self, task_id: String, previous_task: Task) { let action = UndoableAction::Edit { task_id, previous_task }; self.add_to_undo_stack(action); }
 }

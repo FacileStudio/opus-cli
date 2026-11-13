@@ -71,7 +71,7 @@ pub fn draw_task_details(f: &mut Frame, app: &App, area: Rect) {
                         Span::raw(format!(" {} subtask(s)", subtasks.len()))
                     ]));
 
-                    for (_i, subtask) in subtasks.iter().take(5).enumerate() {
+                    for subtask in subtasks.iter().take(5) {
                         let status_icon = if subtask.done { "✓" } else { "○" };
                         let status_color = if subtask.done { Color::Green } else { Color::Gray };
 
@@ -115,7 +115,7 @@ pub fn draw_task_details(f: &mut Frame, app: &App, area: Rect) {
 
         {
             let (priority_color, priority_label) = match task.priority {
-                Priority::NoPriority => (None, None),
+                Priority::Unset => (None, None),
                 Priority::Low => (Some(Color::Blue), Some("Low")),
                 Priority::Medium => (Some(Color::Yellow), Some("Medium")),
                 Priority::High => (Some(Color::Rgb(255, 165, 0)), Some("High")),
@@ -215,7 +215,7 @@ pub fn draw_task_details(f: &mut Frame, app: &App, area: Rect) {
                 ]));
                 details_lines.push(Line::from(""));
 
-                for (_i, comment) in comments.iter().enumerate() {
+                for comment in comments.iter() {
                     let author = if let Some(user) = &comment.user {
                         if !user.name.is_empty() {
                             user.name.clone()

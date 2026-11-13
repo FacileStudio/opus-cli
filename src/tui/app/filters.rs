@@ -73,8 +73,7 @@ impl App {
 
             if let Some(start) = description.find("opus_project:") {
                 let after_colon = &description[start + "opus_project:".len()..];
-                let mut project_name = after_colon.trim()
-                    .split_whitespace()
+                let mut project_name = after_colon.split_whitespace()
                     .next()
                     .unwrap_or("")
                     .trim();

@@ -13,7 +13,7 @@ use crate::tui::app::suggestion_mode::SuggestionMode;
 
 fn priority_to_num(p: &Priority) -> i32 {
     match p {
-        Priority::NoPriority => 0,
+        Priority::Unset => 0,
         Priority::Low => 1,
         Priority::Medium => 2,
         Priority::High => 3,
@@ -308,10 +308,6 @@ impl App {
         }
     }
 
-    pub fn default() -> Self {
-        Self::new_with_config(OpusConfig::default(), "Inbox".to_string())
-    }
-
     // --- BEGIN FULL MOVED METHODS ---
     pub fn quit(&mut self) { self.running = false; }
     pub fn next_task(&mut self) { if !self.tasks.is_empty() { self.selected_task_index = (self.selected_task_index + 1) % self.tasks.len(); } }
@@ -409,11 +405,7 @@ impl App {
         if let Some(pos) = before_cursor.rfind('*') {
             let after = &before_cursor[pos+1..];
             // Special handling for square brackets - if we're inside [], continue until ]
-            let suggestion_text = if after.starts_with('[') {
-                &after[1..]
-            } else {
-                after
-            };
+            let suggestion_text = after.strip_prefix('[').unwrap_or(after);
 
             // Allow spaces and more characters in label suggestions, but stop at certain delimiters
             if suggestion_text.chars().all(is_suggestion_char) {
@@ -441,9 +433,7 @@ impl App {
                     .map(|(label, _)| label)
                     .collect();
 
-                if filtered != self.suggestions {
-                    self.selected_suggestion = 0;
-                } else if self.selected_suggestion >= filtered.len() {
+                if filtered != self.suggestions || self.selected_suggestion >= filtered.len() {
                     self.selected_suggestion = 0;
                 }
                 self.suggestions = filtered;
@@ -454,11 +444,7 @@ impl App {
         if let Some(pos) = before_cursor.rfind('+') {
             let after = &before_cursor[pos+1..];
             // Special handling for square brackets - if we're inside [], continue until ]
-            let suggestion_text = if after.starts_with('[') {
-                &after[1..]
-            } else {
-                after
-            };
+            let suggestion_text = after.strip_prefix('[').unwrap_or(after);
 
             // Allow spaces and more characters in project suggestions, but stop at certain delimiters
             if suggestion_text.chars().all(is_suggestion_char) {
@@ -489,9 +475,7 @@ impl App {
                     .map(|(project, _)| project)
                     .collect();
 
-                if filtered != self.suggestions {
-                    self.selected_suggestion = 0;
-                } else if self.selected_suggestion >= filtered.len() {
+                if filtered != self.suggestions || self.selected_suggestion >= filtered.len() {
                     self.selected_suggestion = 0;
                 }
                 self.suggestions = filtered;
@@ -526,26 +510,26 @@ impl App {
                 self.tasks = new_tasks;
                 self.apply_hierarchical_sort();
             }
-            SortOrder::TitleAZ => self.tasks.sort_by(|a, b| normalize_string(&a.title).cmp(&normalize_string(&b.title))),
-            SortOrder::TitleZA => self.tasks.sort_by(|a, b| normalize_string(&b.title).cmp(&normalize_string(&a.title))),
-            SortOrder::PriorityHighToLow => self.tasks.sort_by(|a, b| priority_to_num(&b.priority).cmp(&priority_to_num(&a.priority))),
-            SortOrder::PriorityLowToHigh => self.tasks.sort_by(|a, b| priority_to_num(&a.priority).cmp(&priority_to_num(&b.priority))),
+            SortOrder::TitleAZ => self.tasks.sort_by_key(|a| normalize_string(&a.title)),
+            SortOrder::TitleZA => self.tasks.sort_by_key(|t| std::cmp::Reverse(normalize_string(&t.title))),
+            SortOrder::PriorityHighToLow => self.tasks.sort_by_key(|t| std::cmp::Reverse(priority_to_num(&t.priority))),
+            SortOrder::PriorityLowToHigh => self.tasks.sort_by_key(|a| priority_to_num(&a.priority)),
             SortOrder::FavoriteStarredFirst => {
                 self.tasks.sort_by(|a, b| {
                     normalize_string(&a.title).cmp(&normalize_string(&b.title))
                 });
             }
             SortOrder::DueDateEarliestFirst => {
-                self.tasks.sort_by(|a, b| a.due_date.cmp(&b.due_date));
+                self.tasks.sort_by_key(|a| a.due_date);
             }
             SortOrder::DueDateLatestFirst => {
-                self.tasks.sort_by(|a, b| b.due_date.cmp(&a.due_date));
+                self.tasks.sort_by_key(|t| std::cmp::Reverse(t.due_date));
             }
             SortOrder::StartDateEarliestFirst => {
-                self.tasks.sort_by(|a, b| a.start_date.cmp(&b.start_date));
+                self.tasks.sort_by_key(|a| a.start_date);
             }
             SortOrder::StartDateLatestFirst => {
-                self.tasks.sort_by(|a, b| b.start_date.cmp(&a.start_date));
+                self.tasks.sort_by_key(|t| std::cmp::Reverse(t.start_date));
             }
         }
     }
@@ -728,7 +712,7 @@ impl App {
                     TaskColumn::Priority => {
                         let a_num = priority_to_num(&a.priority);
                         let b_num = priority_to_num(&b.priority);
-                        let cmp = match (a_num, b_num) {
+                        match (a_num, b_num) {
                             (0, 0) => std::cmp::Ordering::Equal,
                             (0, _) => std::cmp::Ordering::Greater,
                             (_, 0) => std::cmp::Ordering::Less,
@@ -736,8 +720,7 @@ impl App {
                                 SortDirection::Asc => a_num.cmp(&b_num),
                                 SortDirection::Desc => b_num.cmp(&a_num),
                             },
-                        };
-                        cmp
+                        }
                     }
                     TaskColumn::DueDate => {
                         // None (no due date) should always sort last

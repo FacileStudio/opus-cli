@@ -83,7 +83,7 @@ impl TerminalCapabilities {
         ];
 
         // Check file extension
-        if let Some(ext) = filename.split('.').last() {
+        if let Some(ext) = filename.split('.').next_back() {
             if image_extensions.iter().any(|&img_ext| ext.eq_ignore_ascii_case(img_ext)) {
                 return true;
             }
@@ -102,7 +102,7 @@ impl TerminalCapabilities {
     /// Get a simple ASCII representation of an image file
     pub fn get_image_ascii_art(filename: &str) -> Option<String> {
         // Simple ASCII art based on file type
-        let ext = filename.split('.').last().unwrap_or("").to_lowercase();
+        let ext = filename.split('.').next_back().unwrap_or("").to_lowercase();
         match ext.as_str() {
             "jpg" | "jpeg" => Some("🖼️  [JPEG Image]".to_string()),
             "png" => Some("🖼️  [PNG Image]".to_string()),

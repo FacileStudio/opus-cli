@@ -216,11 +216,9 @@ fn delete_char_from_current_field(form: &mut FormEditState) {
                 form.cursor_position = 0;
             }
         }
-        9 => {
-            if form.cursor_position > 0 && form.cursor_position <= form.comment.len() {
-                form.cursor_position -= 1;
-                form.comment.remove(form.cursor_position);
-            }
+        9 if form.cursor_position > 0 && form.cursor_position <= form.comment.len() => {
+            form.cursor_position -= 1;
+            form.comment.remove(form.cursor_position);
         }
         _ => {}
     }

@@ -18,7 +18,7 @@ pub async fn handle_quick_add_modal(
         match key.code {
             KeyCode::Char('z') => {
                 debug_log("Quick Add Modal: Undo requested (Ctrl+Z)");
-                if let Some(_) = app.undo_last_action() {
+                if app.undo_last_action().is_some() {
                     debug_log("Quick Add Modal: Undo successful");
                 } else {
                     debug_log("Quick Add Modal: No action to undo");
@@ -27,7 +27,7 @@ pub async fn handle_quick_add_modal(
             },
             KeyCode::Char('y') => {
                 debug_log("Quick Add Modal: Redo requested (Ctrl+Y)");
-                if let Some(_) = app.redo_last_action() {
+                if app.redo_last_action().is_some() {
                     debug_log("Quick Add Modal: Redo successful");
                 } else {
                     debug_log("Quick Add Modal: No action to redo");
@@ -201,7 +201,7 @@ pub async fn handle_quick_add_modal(
                 let suggestion = app.suggestions[app.selected_suggestion].clone();
                 let cursor = app.quick_add_cursor_position;
                 let input = app.get_quick_add_input();
-                if let Some(pos) = input[..cursor].rfind(|c| c == '*' || c == '+') {
+                if let Some(pos) = input[..cursor].rfind(['*', '+']) {
                     let mut new_input = String::new();
                     new_input.push_str(&input[..pos]);
                     new_input.push(input.chars().nth(pos).unwrap());
@@ -212,7 +212,7 @@ pub async fn handle_quick_add_modal(
                         new_input.push_str(&suggestion);
                     }
 
-                    if input.get(cursor..cursor+1).map_or(true, |c| c == " " || c == "") {
+                    if input.get(cursor..cursor+1).is_none_or(|c| c == " " || c.is_empty()) {
                         new_input.push(' ');
                         new_input.push_str(&input[cursor..]);
                         app.quick_add_cursor_position = pos + 1 +
@@ -297,7 +297,7 @@ pub async fn handle_quick_add_modal(
                 let suggestion = app.suggestions[app.selected_suggestion].clone();
                 let cursor = app.quick_add_cursor_position;
                 let input = app.get_quick_add_input();
-                if let Some(pos) = input[..cursor].rfind(|c| c == '*' || c == '+') {
+                if let Some(pos) = input[..cursor].rfind(['*', '+']) {
                     let mut new_input = String::new();
                     new_input.push_str(&input[..pos]);
                     new_input.push(input.chars().nth(pos).unwrap());
@@ -308,7 +308,7 @@ pub async fn handle_quick_add_modal(
                         new_input.push_str(&suggestion);
                     }
 
-                    if input.get(cursor..cursor+1).map_or(true, |c| c == " " || c == "") {
+                    if input.get(cursor..cursor+1).is_none_or(|c| c == " " || c.is_empty()) {
                         new_input.push(' ');
                         new_input.push_str(&input[cursor..]);
                         app.quick_add_cursor_position = pos + 1 +

@@ -38,6 +38,12 @@ pub struct QuickAddParser {
     weekday_keywords: AhoCorasick,
 }
 
+impl Default for QuickAddParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QuickAddParser {
     pub fn new() -> Self {
         let date_patterns = vec![
@@ -193,9 +199,9 @@ impl QuickAddParser {
                 let now = Local::now();
                 let mut last_day = now.date_naive();
                 last_day = last_day.with_day(1).unwrap();
-                last_day = last_day + Duration::days(32);
+                last_day += Duration::days(32);
                 last_day = last_day.with_day(1).unwrap();
-                last_day = last_day - Duration::days(1);
+                last_day -= Duration::days(1);
                 task.start_date = last_day
                     .and_hms_opt(23, 59, 59)
                     .map(|dt| dt.and_utc())
@@ -234,7 +240,7 @@ impl QuickAddParser {
         let text_lower = text.to_lowercase();
         let now = Local::now();
 
-        if let Ok(parsed_date) = parse_date_string(&text, now.into(), Dialect::Us) {
+        if let Ok(parsed_date) = parse_date_string(text, now.into(), Dialect::Us) {
             return Some(parsed_date);
         }
 
@@ -328,9 +334,9 @@ impl QuickAddParser {
         } else if text.contains("end of month") {
             let mut last_day = now.date_naive();
             last_day = last_day.with_day(1).unwrap();
-            last_day = last_day + Duration::days(32);
+            last_day += Duration::days(32);
             last_day = last_day.with_day(1).unwrap();
-            last_day = last_day - Duration::days(1);
+            last_day -= Duration::days(1);
             Some(
                 last_day
                     .and_hms_opt(target_time.0, target_time.1, 59)?

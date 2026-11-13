@@ -40,32 +40,32 @@ pub async fn run_ui(
                     // Route key to quick add modal handler
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    handle_quick_add_modal(&mut *app_guard, &key, &client_clone, &client_clone).await;
+                    handle_quick_add_modal(&mut app_guard, &key, &client_clone, &client_clone).await;
                     continue;
                 } else if app_guard.show_edit_modal {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    handle_edit_modal(&mut *app_guard, &key, &client_clone, &client_clone).await;
+                    handle_edit_modal(&mut app_guard, &key, &client_clone, &client_clone).await;
                     continue;
                 } else if app_guard.show_form_edit_modal {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    handle_form_edit_modal(&mut *app_guard, &key, &client_clone, &client_clone).await;
+                    handle_form_edit_modal(&mut app_guard, &key, &client_clone, &client_clone).await;
                     continue;
                 } else if app_guard.show_label_picker {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    crate::tui::pickers::label::handle_label_picker(&mut *app_guard, &key);
+                    crate::tui::pickers::label::handle_label_picker(&mut app_guard, &key);
                     continue;
                 } else if app_guard.show_project_picker {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    crate::tui::pickers::project::handle_project_picker(&mut *app_guard, &key);
+                    crate::tui::pickers::project::handle_project_picker(&mut app_guard, &key);
                     continue;
                 } else if app_guard.show_workspace_picker {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    crate::tui::pickers::workspace::handle_workspace_picker(&mut *app_guard, &key, &client_clone).await;
+                    crate::tui::pickers::workspace::handle_workspace_picker(&mut app_guard, &key, &client_clone).await;
                     continue;
                 } else if app_guard.show_comments_modal {
                     drop(app_guard);
@@ -159,7 +159,7 @@ pub async fn run_ui(
                             let actions = app_guard.config.available_quick_actions();
                             if let Some(action) = actions.get(app_guard.selected_quick_action_index as usize).cloned() {
                                 app_guard.hide_quick_actions_modal();
-                                apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await;
+                                apply_quick_action_and_sync(&mut app_guard, action, &client_clone).await;
                             }
                         }
                         KeyCode::Char(c) => {
@@ -169,7 +169,7 @@ pub async fn run_ui(
                                 let action = action.clone();
                                 app_guard.hide_quick_actions_modal();
                                 app_guard.selected_quick_action_index = idx;
-                                apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await;
+                                apply_quick_action_and_sync(&mut app_guard, action, &client_clone).await;
                             }
                         }
                         _ => {}
@@ -188,54 +188,49 @@ pub async fn run_ui(
                             app_guard.next_subtask_task();
                         }
                         KeyCode::Enter => {
-                            if let Some(ref operation) = app_guard.subtask_operation {
-                                match operation {
-                                    _ => {
-                                        // Handle single selection operations
-                                        if let Some((target_task_id, _)) = app_guard.get_selected_subtask_task() {
-                                            if let Some(selected_task) = app_guard.get_selected_task() {
-                                                let current_task_id = selected_task.id.clone();
-                                                let operation = app_guard.subtask_operation.clone();
-                                                app_guard.hide_subtask_modal();
+                            if app_guard.subtask_operation.is_some() {
+                                if let Some((target_task_id, _)) = app_guard.get_selected_subtask_task() {
+                                    if let Some(selected_task) = app_guard.get_selected_task() {
+                                        let current_task_id = selected_task.id.clone();
+                                        let operation = app_guard.subtask_operation.clone();
+                                        app_guard.hide_subtask_modal();
 
-                                                // Handle the subtask operation async
-                                                let client = client_clone.lock().await;
-                                                match operation {
-                                                    Some(crate::tui::app::state::SubtaskOperation::MakeSubtask) => {
-                                                        match client.create_task_relation(
-                                                            &current_task_id,
-                                                            &target_task_id,
-                                                            crate::opus_client::relations::RelationType::Subtask.as_str()
-                                                        ).await {
-                                                            Ok(_) => {
-                                                                app_guard.show_toast("Task made into subtask successfully!".to_string());
-                                                                app_guard.add_debug_message(format!("Task {} is now a subtask of {}", current_task_id, target_task_id));
-                                                            }
-                                                            Err(e) => {
-                                                                app_guard.show_toast(format!("Failed to create subtask relation: {}", e));
-                                                                app_guard.add_debug_message(format!("Error creating subtask relation: {}", e));
-                                                            }
-                                                        }
+                                        // Handle the subtask operation async
+                                        let client = client_clone.lock().await;
+                                        match operation {
+                                            Some(crate::tui::app::state::SubtaskOperation::MakeSubtask) => {
+                                                match client.create_task_relation(
+                                                    &current_task_id,
+                                                    &target_task_id,
+                                                    crate::opus_client::relations::RelationType::Subtask.as_str()
+                                                ).await {
+                                                    Ok(_) => {
+                                                        app_guard.show_toast("Task made into subtask successfully!".to_string());
+                                                        app_guard.add_debug_message(format!("Task {} is now a subtask of {}", current_task_id, target_task_id));
                                                     }
-                                                    Some(crate::tui::app::state::SubtaskOperation::AddSubtask) => {
-                                                        match client.create_task_relation(
-                                                            &target_task_id,
-                                                            &current_task_id,
-                                                            crate::opus_client::relations::RelationType::Subtask.as_str()
-                                                        ).await {
-                                                            Ok(_) => {
-                                                                app_guard.show_toast("Subtask added successfully!".to_string());
-                                                                app_guard.add_debug_message(format!("Task {} is now a subtask of {}", target_task_id, current_task_id));
-                                                            }
-                                                            Err(e) => {
-                                                                app_guard.show_toast(format!("Failed to create subtask relation: {}", e));
-                                                                app_guard.add_debug_message(format!("Error creating subtask relation: {}", e));
-                                                            }
-                                                        }
+                                                    Err(e) => {
+                                                        app_guard.show_toast(format!("Failed to create subtask relation: {}", e));
+                                                        app_guard.add_debug_message(format!("Error creating subtask relation: {}", e));
                                                     }
-                                                    _ => {}
                                                 }
                                             }
+                                            Some(crate::tui::app::state::SubtaskOperation::AddSubtask) => {
+                                                match client.create_task_relation(
+                                                    &target_task_id,
+                                                    &current_task_id,
+                                                    crate::opus_client::relations::RelationType::Subtask.as_str()
+                                                ).await {
+                                                    Ok(_) => {
+                                                        app_guard.show_toast("Subtask added successfully!".to_string());
+                                                        app_guard.add_debug_message(format!("Task {} is now a subtask of {}", target_task_id, current_task_id));
+                                                    }
+                                                    Err(e) => {
+                                                        app_guard.show_toast(format!("Failed to create subtask relation: {}", e));
+                                                        app_guard.add_debug_message(format!("Error creating subtask relation: {}", e));
+                                                    }
+                                                }
+                                            }
+                                            _ => {}
                                         }
                                     }
                                 }
@@ -379,7 +374,7 @@ pub async fn run_ui(
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
                     let client = client_clone.lock().await;
-                    app_guard.confirm_action_async(&*client).await;
+                    app_guard.confirm_action_async(&client).await;
                     continue;
                 }
 
@@ -388,15 +383,15 @@ pub async fn run_ui(
                     let mut app_guard = app.lock().await;
                     match app_guard.config.get_quick_action("d").cloned() {
                         Some(action) => {
-                            apply_quick_action_and_sync(&mut *app_guard, action, &client_clone).await
+                            apply_quick_action_and_sync(&mut app_guard, action, &client_clone).await
                         }
-                        None => cycle_task_status_and_sync(&mut *app_guard, &client_clone).await,
+                        None => cycle_task_status_and_sync(&mut app_guard, &client_clone).await,
                     }
                     continue;
                 }
 
                 // handle dispatch_key and refresh
-                let key_handled = dispatch_key(&mut *app_guard, key, &terminal);
+                let key_handled = dispatch_key(&mut app_guard, key, &terminal);
 
                 // After any navigation key, check if we need to fetch detailed task data
                 if key_handled && (key.code == KeyCode::Up || key.code == KeyCode::Down ||
@@ -424,7 +419,7 @@ pub async fn run_ui(
                 if key.code == KeyCode::Char('r') {
                     drop(app_guard);
                     let mut app_guard = app.lock().await;
-                    refresh_from_api(&mut *app_guard, &client_clone).await;
+                    refresh_from_api(&mut app_guard, &client_clone).await;
                     continue;
                 }
 

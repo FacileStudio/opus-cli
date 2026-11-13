@@ -311,7 +311,7 @@ impl OpusConfig {
     pub fn get_columns(&self) -> Vec<TableColumn> {
         self.table_columns
             .clone()
-            .unwrap_or_else(|| TaskColumn::default_columns())
+            .unwrap_or_else(TaskColumn::default_columns)
     }
 
     #[allow(dead_code)]
@@ -327,13 +327,13 @@ impl OpusConfig {
         }
         self.table_columns
             .clone()
-            .unwrap_or_else(|| TaskColumn::default_columns())
+            .unwrap_or_else(TaskColumn::default_columns)
     }
 
     pub fn get_column_layouts(&self) -> Vec<ColumnLayout> {
         self.column_layouts
             .clone()
-            .unwrap_or_else(|| ColumnLayout::default_layouts())
+            .unwrap_or_else(ColumnLayout::default_layouts)
     }
 
     pub fn get_active_layout_name(&self) -> String {

@@ -8,14 +8,11 @@ pub fn clear_debug_log() {
     }
 
     // Truncate the log file to clear it
-    if let Ok(_) = OpenOptions::new()
+    let _ = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
-        .open("opus_debug.log")
-    {
-        // File has been cleared
-    }
+        .open("opus_debug.log");
 }
 
 pub fn debug_log(message: &str) {

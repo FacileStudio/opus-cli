@@ -2,14 +2,14 @@ use crate::opus::models::Task;
 
 #[derive(Clone, Debug)]
 pub enum UndoableAction {
-    TaskDeletion {
+    Deletion {
         task: Task,
         position: usize,
     },
-    TaskCreation {
+    Creation {
         task_id: String,
     },
-    TaskEdit {
+    Edit {
         task_id: String,
         previous_task: Task,
     },

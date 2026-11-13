@@ -56,7 +56,7 @@ fn priority_marker(priority: &Priority) -> Option<(&'static str, Color)> {
         Priority::High => Some(("\u{f024} ", Color::Rgb(255, 165, 0))),
         Priority::Medium => Some(("\u{f024} ", Color::Yellow)),
         Priority::Low => Some(("\u{f024} ", Color::Blue)),
-        Priority::NoPriority => None,
+        Priority::Unset => None,
     }
 }
 
@@ -182,7 +182,7 @@ fn cell_for_column<'a>(task: &'a Task, column: &TableColumn, app: &'a App, width
                 Priority::High => "high",
                 Priority::Medium => "medium",
                 Priority::Low => "low",
-                Priority::NoPriority => "-",
+                Priority::Unset => "-",
             };
             Cell::from(format!("{}{}", marker, label)).style(Style::default().fg(color))
         }
