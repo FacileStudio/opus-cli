@@ -10,6 +10,18 @@ what shipped rather than what was written down at the time.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-13
+
+### Changed
+
+- `cargo clippy --all-targets -- -D warnings` passes. Every lint is fixed without changing what
+  the CLI or the TUI does. `Priority::NoPriority` is renamed `Priority::Unset` and the
+  undo actions lose their `Task` prefix; the priority still reads and writes `no-priority`.
+
+### Removed
+
+- `OpusClient::update_task_from_form` and the inherent `App::default`, which nothing called.
+
 ## [0.9.1] - 2026-11-11
 
 ### Added
