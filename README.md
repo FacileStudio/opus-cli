@@ -34,14 +34,14 @@ Tasks are written in an inline "magic" syntax, such as `Review proposal +"Client
 curl -fsSL https://raw.githubusercontent.com/FacileStudio/opus-cli/main/install.sh | bash
 ```
 
-Installs to `~/.local/bin` via [facile](https://github.com/FacileStudio/facile), the suite
-installer. Pass `--bin-dir <dir>` to change that, `--source` to build from source, `--no-skill`
-to skip AI agent skill registration.
+Installs to `~/.local/bin` via [kit](https://github.com/FacileStudio/kit), the Facile package manager.
+Pass `--bin-dir <dir>` to change that, `--source` to build from source, `--no-skill` to skip AI
+agent skill registration.
 
-Already have `facile`:
+Already have `kit`:
 
 ```sh
-facile install opus
+kit add opus
 ```
 
 ## Usage
